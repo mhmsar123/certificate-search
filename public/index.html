@@ -2,9 +2,10 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>بحث عن شهادة طالب</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/pdfjs/build/pdf.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -26,19 +27,38 @@
     <div class="error-msg" id="errorMsg"></div>
 
     <div class="pdf-container" id="pdfContainer">
-      <iframe id="pdfViewer" src=""></iframe>
+      <div class="action-buttons" id="actionButtons" style="display:none;">
+        <button class="btn btn-download" onclick="downloadPdf()">تحميل PDF</button>
+        <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
+      </div>
+      <div class="certificate-wrapper" id="certificateWrapper">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
     </div>
 
     <a href="/admin" class="admin-link">admin</a>
   </div>
 
+  <div class="overlay" id="overlay" onclick="closeImage()">
+    <img id="fullImage" alt="الشهادة">
+  </div>
+
   <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+
     const searchBox = document.getElementById('studentId');
     const loading = document.getElementById('loading');
     const errorMsg = document.getElementById('errorMsg');
     const pdfContainer = document.getElementById('pdfContainer');
-    const pdfViewer = document.getElementById('pdfViewer');
+    const pdfCanvas = document.getElementById('pdfCanvas');
+    const actionButtons = document.getElementById('actionButtons');
+    const certificateWrapper = document.getElementById('certificateWrapper');
     const searchBtn = document.getElementById('searchBtn');
+    const overlay = document.getElementById('overlay');
+    const fullImage = document.getElementById('fullImage');
+
+    let currentPdfBlob = null;
+    let currentPdfUrl = null;
 
     searchBox.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') searchCertificate();
@@ -54,6 +74,7 @@
       loading.style.display = 'block';
       errorMsg.style.display = 'none';
       pdfContainer.style.display = 'none';
+      actionButtons.style.display = 'none';
       searchBtn.disabled = true;
 
       try {
@@ -68,12 +89,14 @@
           throw new Error(data.error || 'لم يتم العثور على الشهادة');
         }
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+        currentPdfBlob = await res.blob();
+        currentPdfUrl = URL.createObjectURL(currentPdfBlob);
 
-        pdfViewer.src = url;
         pdfContainer.style.display = 'block';
+        actionButtons.style.display = 'flex';
         errorMsg.style.display = 'none';
+
+        renderPdfToCanvas(currentPdfBlob);
       } catch (err) {
         showError(err.message);
       } finally {
@@ -82,10 +105,54 @@
       }
     }
 
+    async function renderPdfToCanvas(blob) {
+      try {
+        const arrayBuffer = await blob.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1);
+
+        const wrapperWidth = certificateWrapper.clientWidth || 700;
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(wrapperWidth / viewport.width, 1.5);
+        const scaledViewport = page.getViewport({ scale });
+
+        const canvas = pdfCanvas;
+        const ctx = canvas.getContext('2d');
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+      } catch (err) {
+        console.error('Render error:', err);
+      }
+    }
+
+    function downloadPdf() {
+      if (!currentPdfUrl) return;
+      const a = document.createElement('a');
+      a.href = currentPdfUrl;
+      a.download = 'شهادة.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function saveAsImage() {
+      if (!pdfCanvas.width) return;
+      const dataUrl = pdfCanvas.toDataURL('image/png');
+      fullImage.src = dataUrl;
+      overlay.style.display = 'flex';
+    }
+
+    function closeImage() {
+      overlay.style.display = 'none';
+    }
+
     function showError(msg) {
       errorMsg.textContent = msg;
       errorMsg.style.display = 'block';
       pdfContainer.style.display = 'none';
+      actionButtons.style.display = 'none';
     }
   </script>
 </body>
