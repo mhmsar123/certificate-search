@@ -9,20 +9,37 @@ const { PDFDocument } = require('pdf-lib');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'admin123';
+const dataDir = path.join(__dirname, 'data');
+const adminsPath = path.join(dataDir, 'admins.json');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(adminsPath)) {
+  fs.writeFileSync(adminsPath, JSON.stringify([
+    { username: 'admin', password: 'admin123' }
+  ], null, 2));
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, 'certificates.pdf')
-});
+function getAdmins() {
+  return JSON.parse(fs.readFileSync(adminsPath, 'utf8'));
+}
+
+function saveAdmins(admins) {
+  fs.writeFileSync(adminsPath, JSON.stringify(admins, null, 2));
+}
+
+function getAdminDir(username) {
+  const dir = path.join(__dirname, 'uploads', username);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 const upload = multer({
-  storage,
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, getAdminDir(req.session.username));
+    },
+    filename: (req, file, cb) => cb(null, 'certificates.pdf')
+  }),
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') cb(null, true);
     else cb(new Error('PDF files only'), false);
@@ -47,11 +64,14 @@ function requireAuth(req, res, next) {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
+  const admins = getAdmins();
+  const admin = admins.find(a => a.username === username && a.password === password);
+  if (admin) {
     req.session.isAdmin = true;
+    req.session.username = username;
     req.session.save((err) => {
       if (err) return res.status(500).json({ error: 'Session error' });
-      res.json({ success: true });
+      res.json({ success: true, username });
     });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
@@ -64,14 +84,33 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/check-auth', (req, res) => {
-  res.json({ isAdmin: !!(req.session && req.session.isAdmin) });
+  res.json({
+    isAdmin: !!(req.session && req.session.isAdmin),
+    username: req.session?.username || null
+  });
+});
+
+app.post('/api/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل' });
+  }
+  const admins = getAdmins();
+  const admin = admins.find(a => a.username === req.session.username);
+  if (!admin || admin.password !== currentPassword) {
+    return res.status(400).json({ error: 'كلمة المرور الحالية غير صحيحة' });
+  }
+  admin.password = newPassword;
+  saveAdmins(admins);
+  res.json({ success: true, message: 'تم تغيير كلمة المرور بنجاح' });
 });
 
 app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   try {
-    const pdfPath = path.join(__dirname, 'uploads', 'certificates.pdf');
+    const adminDir = getAdminDir(req.session.username);
+    const pdfPath = path.join(adminDir, 'certificates.pdf');
     const data = new Uint8Array(fs.readFileSync(pdfPath));
 
     const doc = await pdfjsLib.getDocument({ data }).promise;
@@ -91,10 +130,7 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
       }
     }
 
-    fs.writeFileSync(
-      path.join(__dirname, 'uploads', 'index.json'),
-      JSON.stringify(index, null, 2)
-    );
+    fs.writeFileSync(path.join(adminDir, 'index.json'), JSON.stringify(index, null, 2));
 
     res.json({
       success: true,
@@ -108,9 +144,22 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
   }
 });
 
-app.get('/api/status', (req, res) => {
-  const pdfPath = path.join(__dirname, 'uploads', 'certificates.pdf');
-  const indexPath = path.join(__dirname, 'uploads', 'index.json');
+app.post('/api/delete-certificates', requireAuth, (req, res) => {
+  const adminDir = getAdminDir(req.session.username);
+  const pdfPath = path.join(adminDir, 'certificates.pdf');
+  const indexPath = path.join(adminDir, 'index.json');
+
+  let deleted = false;
+  if (fs.existsSync(pdfPath)) { fs.unlinkSync(pdfPath); deleted = true; }
+  if (fs.existsSync(indexPath)) { fs.unlinkSync(indexPath); deleted = true; }
+
+  res.json({ success: true, deleted, message: deleted ? 'تم مسح جميع الشهادات' : 'لا توجد شهادات للمسح' });
+});
+
+app.get('/api/status', requireAuth, (req, res) => {
+  const adminDir = getAdminDir(req.session.username);
+  const pdfPath = path.join(adminDir, 'certificates.pdf');
+  const indexPath = path.join(adminDir, 'index.json');
   const hasPdf = fs.existsSync(pdfPath);
   let indexedCount = 0;
   if (hasPdf && fs.existsSync(indexPath)) {
@@ -127,33 +176,36 @@ app.post('/api/search', async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
 
   try {
-    const indexPath = path.join(__dirname, 'uploads', 'index.json');
-    const pdfPath = path.join(__dirname, 'uploads', 'certificates.pdf');
-
-    if (!fs.existsSync(indexPath) || !fs.existsSync(pdfPath)) {
+    const uploadsRoot = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsRoot)) {
       return res.status(404).json({ error: 'No certificates uploaded yet' });
     }
 
-    const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-    const pages = index[id];
+    const adminDirs = fs.readdirSync(uploadsRoot);
+    for (const adminName of adminDirs) {
+      const indexPath = path.join(uploadsRoot, adminName, 'index.json');
+      const pdfPath = path.join(uploadsRoot, adminName, 'certificates.pdf');
+      if (!fs.existsSync(indexPath) || !fs.existsSync(pdfPath)) continue;
 
-    if (!pages || pages.length === 0) {
-      return res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });
+      const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+      const pages = index[id];
+      if (!pages || pages.length === 0) continue;
+
+      const originalPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
+      const newPdf = await PDFDocument.create();
+
+      for (const pageNum of pages) {
+        const [copiedPage] = await newPdf.copyPages(originalPdf, [pageNum - 1]);
+        newPdf.addPage(copiedPage);
+      }
+
+      const pdfBytes = await newPdf.save();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
+      return res.send(Buffer.from(pdfBytes));
     }
 
-    const originalPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
-    const newPdf = await PDFDocument.create();
-
-    for (const pageNum of pages) {
-      const [copiedPage] = await newPdf.copyPages(originalPdf, [pageNum - 1]);
-      newPdf.addPage(copiedPage);
-    }
-
-    const pdfBytes = await newPdf.save();
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
-    res.send(Buffer.from(pdfBytes));
+    res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Search failed: ' + err.message });

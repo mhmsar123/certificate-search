@@ -23,6 +23,7 @@
 
     <div class="admin-panel" id="adminPanel">
       <div class="school-name">مدرسة أسامة بن زيد الاعدادية بنين</div>
+      <p class="subtitle" id="welcomeMsg" style="font-size:14px;color:#999;margin-bottom:5px;"></p>
       <h1>رفع ملف الشهادات</h1>
       <p class="subtitle">قم برفع ملف PDF واحد يحتوي على جميع الشهادات</p>
 
@@ -40,10 +41,27 @@
 
       <div class="upload-status" id="uploadStatus"></div>
 
-      <button class="btn btn-danger" onclick="logout()" style="margin-top:30px;">
-        تسجيل خروج
-      </button>
+      <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
 
+      <h2 style="font-size:20px;color:#e74c3c;margin-bottom:15px;">مسح الشهادات</h2>
+      <button class="btn btn-danger" onclick="deleteCertificates()" id="deleteBtn">
+        مسح جميع الشهادات
+      </button>
+      <div class="upload-status" id="deleteStatus"></div>
+
+      <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
+
+      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">تغيير كلمة المرور</h2>
+      <div class="login-form">
+        <input type="password" id="currentPassword" placeholder="كلمة المرور الحالية">
+        <input type="password" id="newPassword" placeholder="كلمة المرور الجديدة">
+        <button class="btn btn-primary" onclick="changePassword()">تغيير كلمة المرور</button>
+      </div>
+      <div class="upload-status" id="passwordStatus"></div>
+
+      <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
+
+      <button class="btn btn-danger" onclick="logout()">تسجيل خروج</button>
       <a href="/" class="admin-link">العودة للصفحة الرئيسية</a>
     </div>
   </div>
@@ -56,6 +74,10 @@
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadStatus = document.getElementById('uploadStatus');
     const uploadArea = document.getElementById('uploadArea');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const deleteStatus = document.getElementById('deleteStatus');
+    const passwordStatus = document.getElementById('passwordStatus');
+    const welcomeMsg = document.getElementById('welcomeMsg');
 
     document.getElementById('username').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('password').focus();
@@ -95,7 +117,7 @@
       try {
         const res = await fetch('/api/check-auth');
         const data = await res.json();
-        if (data.isAdmin) showAdminPanel();
+        if (data.isAdmin) showAdminPanel(data.username);
       } catch (e) {}
     }
 
@@ -119,7 +141,7 @@
         const data = await res.json();
 
         if (data.success) {
-          showAdminPanel();
+          showAdminPanel(data.username);
         } else {
           loginError.textContent = 'اسم المستخدم أو كلمة المرور خطأ';
           loginError.style.display = 'block';
@@ -170,6 +192,58 @@
       }
     }
 
+    async function deleteCertificates() {
+      if (!confirm('هل أنت متأكد من مسح جميع الشهادات؟')) return;
+
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = 'جاري المسح...';
+
+      try {
+        const res = await fetch('/api/delete-certificates', { method: 'POST' });
+        const data = await res.json();
+
+        deleteStatus.textContent = data.message;
+        deleteStatus.className = 'upload-status ' + (data.success ? 'success' : 'error');
+      } catch (err) {
+        deleteStatus.textContent = 'حدث خطأ';
+        deleteStatus.className = 'upload-status error';
+      } finally {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = 'مسح جميع الشهادات';
+      }
+    }
+
+    async function changePassword() {
+      const current = document.getElementById('currentPassword').value.trim();
+      const newPw = document.getElementById('newPassword').value.trim();
+
+      if (!current || !newPw) {
+        passwordStatus.textContent = 'يرجى ملء جميع الحقول';
+        passwordStatus.className = 'upload-status error';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+        });
+        const data = await res.json();
+
+        passwordStatus.textContent = data.error || data.message;
+        passwordStatus.className = 'upload-status ' + (data.success ? 'success' : 'error');
+
+        if (data.success) {
+          document.getElementById('currentPassword').value = '';
+          document.getElementById('newPassword').value = '';
+        }
+      } catch (err) {
+        passwordStatus.textContent = 'حدث خطأ';
+        passwordStatus.className = 'upload-status error';
+      }
+    }
+
     async function logout() {
       await fetch('/api/logout', { method: 'POST' });
       adminPanel.classList.remove('active');
@@ -177,9 +251,10 @@
       document.getElementById('password').value = '';
     }
 
-    function showAdminPanel() {
+    function showAdminPanel(username) {
       loginSection.style.display = 'none';
       adminPanel.classList.add('active');
+      welcomeMsg.textContent = username ? `مرحباً ${username}` : '';
     }
 
     function showUploadStatus(msg, type) {
