@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - رفع الشهادات</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <div id="loginSection">
+      <div class="school-name">مدرسة أسامة بن زيد الاعدادية بنين</div>
+      <h1>تسجيل دخول الأدمن</h1>
+      <p class="subtitle">يرجى إدخال بيانات الدخول</p>
+
+      <div class="login-form">
+        <input type="text" id="username" placeholder="اسم المستخدم" autocomplete="username">
+        <input type="password" id="password" placeholder="كلمة المرور" autocomplete="current-password">
+        <button class="btn btn-primary" onclick="login()">دخول</button>
+        <div class="error-msg" id="loginError"></div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="adminPanel">
+      <h1>رفع ملف الشهادات</h1>
+      <p class="subtitle">قم برفع ملف PDF واحد يحتوي على جميع الشهادات</p>
+
+      <div class="file-upload-area" id="uploadArea">
+        <input type="file" id="fileInput" accept=".pdf">
+        <div class="file-upload-label">
+          <strong>اختر ملف PDF</strong><br>
+          <span style="font-size:14px;color:#999;">أو اسحب الملف وأفلته هنا</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="uploadBtn" onclick="uploadPdf()" disabled>
+        رفع الملف
+      </button>
+
+      <div class="upload-status" id="uploadStatus"></div>
+
+      <button class="btn btn-danger" onclick="logout()" style="margin-top:30px;">
+        تسجيل خروج
+      </button>
+
+      <a href="/" class="admin-link">العودة للصفحة الرئيسية</a>
+    </div>
+  </div>
+
+  <script>
+    const loginSection = document.getElementById('loginSection');
+    const adminPanel = document.getElementById('adminPanel');
+    const loginError = document.getElementById('loginError');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const uploadArea = document.getElementById('uploadArea');
+
+    document.getElementById('username').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('password').focus();
+    });
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    fileInput.addEventListener('change', () => {
+      uploadBtn.disabled = !fileInput.files.length;
+    });
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#667eea';
+      uploadArea.style.background = '#f8f9ff';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = '#ccc';
+      uploadArea.style.background = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#ccc';
+      uploadArea.style.background = '';
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        uploadBtn.disabled = false;
+      }
+    });
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/check-auth');
+        const data = await res.json();
+        if (data.isAdmin) showAdminPanel();
+      } catch (e) {}
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!username || !password) {
+        loginError.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+        loginError.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showAdminPanel();
+        } else {
+          loginError.textContent = 'اسم المستخدم أو كلمة المرور خطأ';
+          loginError.style.display = 'block';
+        }
+      } catch (err) {
+        loginError.textContent = 'خطأ في الاتصال';
+        loginError.style.display = 'block';
+      }
+    }
+
+    async function uploadPdf() {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      if (file.type !== 'application/pdf') {
+        showUploadStatus('يرجى اختيار ملف PDF', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'جاري الرفع...';
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showUploadStatus(
+            `تم رفع وفهرسة ${data.pages} صفحة بنجاح<br>
+             تم العثور على ${data.indexed} رقم شخصي`,
+            'success'
+          );
+        } else {
+          showUploadStatus(data.error || 'فشل الرفع', 'error');
+        }
+      } catch (err) {
+        showUploadStatus('خطأ في الاتصال بالسيرفر', 'error');
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'رفع الملف';
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      adminPanel.classList.remove('active');
+      loginSection.style.display = 'block';
+      document.getElementById('password').value = '';
+    }
+
+    function showAdminPanel() {
+      loginSection.style.display = 'none';
+      adminPanel.classList.add('active');
+    }
+
+    function showUploadStatus(msg, type) {
+      uploadStatus.textContent = '';
+      uploadStatus.innerHTML = msg;
+      uploadStatus.className = 'upload-status ' + type;
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>

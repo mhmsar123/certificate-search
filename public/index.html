@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بحث عن شهادة طالب</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="school-name">مدرسة أسامة بن زيد الاعدادية بنين</div>
+    <h1>بحث عن شهادة طالب</h1>
+    <p class="subtitle">من فضلك اكتب الرقم الشخصي للطالب</p>
+
+    <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
+
+    <button class="btn btn-primary" id="searchBtn" onclick="searchCertificate()">
+      عرض الشهادة
+    </button>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p style="margin-top:10px;color:#666;">جاري البحث...</p>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="pdf-container" id="pdfContainer">
+      <iframe id="pdfViewer" src=""></iframe>
+    </div>
+
+    <a href="/admin" class="admin-link">admin</a>
+  </div>
+
+  <script>
+    const searchBox = document.getElementById('studentId');
+    const loading = document.getElementById('loading');
+    const errorMsg = document.getElementById('errorMsg');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const pdfViewer = document.getElementById('pdfViewer');
+    const searchBtn = document.getElementById('searchBtn');
+
+    searchBox.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') searchCertificate();
+    });
+
+    async function searchCertificate() {
+      const id = searchBox.value.trim();
+      if (!id) {
+        showError('من فضلك أدخل الرقم الشخصي');
+        return;
+      }
+
+      loading.style.display = 'block';
+      errorMsg.style.display = 'none';
+      pdfContainer.style.display = 'none';
+      searchBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'لم يتم العثور على الشهادة');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        pdfViewer.src = url;
+        pdfContainer.style.display = 'block';
+        errorMsg.style.display = 'none';
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        loading.style.display = 'none';
+        searchBtn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+      pdfContainer.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
