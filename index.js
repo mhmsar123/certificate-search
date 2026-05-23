@@ -156,6 +156,24 @@ app.post('/api/delete-certificates', requireAuth, (req, res) => {
   res.json({ success: true, deleted, message: deleted ? 'تم مسح جميع الشهادات' : 'لا توجد شهادات للمسح' });
 });
 
+app.post('/api/add-admin', requireAuth, (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.json({ success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' });
+  }
+
+  const admins = getAdmins();
+  if (admins.find(a => a.username === username)) {
+    return res.json({ success: false, error: 'اسم المستخدم موجود بالفعل' });
+  }
+
+  admins.push({ username, password });
+  saveAdmins(admins);
+  getAdminDir(username);
+
+  res.json({ success: true, message: `تم إضافة الأدمن "${username}" بنجاح` });
+});
+
 app.get('/api/status', requireAuth, (req, res) => {
   const adminDir = getAdminDir(req.session.username);
   const pdfPath = path.join(adminDir, 'certificates.pdf');

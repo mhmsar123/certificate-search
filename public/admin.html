@@ -61,6 +61,16 @@
 
       <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
 
+      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">إضافة أدمن جديد</h2>
+      <div class="login-form">
+        <input type="text" id="newAdminUser" placeholder="اسم المستخدم الجديد">
+        <input type="password" id="newAdminPass" placeholder="كلمة المرور">
+        <button class="btn btn-primary" onclick="addAdmin()">إضافة أدمن</button>
+      </div>
+      <div class="upload-status" id="addAdminStatus"></div>
+
+      <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
+
       <button class="btn btn-danger" onclick="logout()">تسجيل خروج</button>
       <a href="/" class="admin-link">العودة للصفحة الرئيسية</a>
     </div>
@@ -241,6 +251,38 @@
       } catch (err) {
         passwordStatus.textContent = 'حدث خطأ';
         passwordStatus.className = 'upload-status error';
+      }
+    }
+
+    async function addAdmin() {
+      const username = document.getElementById('newAdminUser').value.trim();
+      const password = document.getElementById('newAdminPass').value.trim();
+      const status = document.getElementById('addAdminStatus');
+
+      if (!username || !password) {
+        status.textContent = 'يرجى ملء جميع الحقول';
+        status.className = 'upload-status error';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/add-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        status.textContent = data.message || data.error;
+        status.className = 'upload-status ' + (data.success ? 'success' : 'error');
+
+        if (data.success) {
+          document.getElementById('newAdminUser').value = '';
+          document.getElementById('newAdminPass').value = '';
+        }
+      } catch (err) {
+        status.textContent = 'حدث خطأ';
+        status.className = 'upload-status error';
       }
     }
 
