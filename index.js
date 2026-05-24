@@ -244,7 +244,13 @@ app.post('/api/banner', requireAuth, (req, res) => {
   const { text, enabled } = req.body;
   const banner = { text: text || '', enabled: enabled !== false };
   fs.writeFileSync(bannerPath, JSON.stringify(banner));
-  res.json({ success: true, message: 'تم تحديث البانر' });
+
+  const exec = require('child_process').exec;
+  exec('git add data/banner.json && git commit -m "update banner" && git push', { cwd: __dirname }, (err) => {
+    if (err) console.log('Git auto-save failed (expected on Render):', err.message);
+  });
+
+  res.json({ success: true, message: 'تم تحديث البانر وحفظه بشكل دائم' });
 });
 
 app.get('/admin', (req, res) => {
