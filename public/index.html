@@ -171,12 +171,8 @@
         const data = await res.json();
         const banner = document.getElementById('newsBanner');
         const text = document.getElementById('bannerTextDisplay');
-        if (data.enabled && data.text) {
-          text.textContent = data.text;
-          banner.style.display = 'flex';
-        } else {
-          banner.style.display = 'none';
-        }
+        text.textContent = data.text;
+        banner.style.display = 'flex';
       } catch (e) {}
     }
 

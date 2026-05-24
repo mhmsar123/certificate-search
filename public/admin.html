@@ -57,9 +57,6 @@
       <h2 style="font-size:20px;color:#333;margin-bottom:15px;">التحكم في البانر الإخباري</h2>
       <div class="login-form">
         <textarea id="bannerText" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;" placeholder="اكتب النص الذي يظهر في البانر"></textarea>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#555;margin:10px 0;cursor:pointer;">
-          <input type="checkbox" id="bannerEnabled" checked> تفعيل البانر
-        </label>
         <button class="btn btn-primary" onclick="saveBanner()">حفظ البانر</button>
       </div>
       <div class="upload-status" id="bannerStatus"></div>
@@ -241,14 +238,13 @@
 
     async function saveBanner() {
       const text = document.getElementById('bannerText').value.trim();
-      const enabled = document.getElementById('bannerEnabled').checked;
       const status = document.getElementById('bannerStatus');
 
       try {
         const res = await fetch('/api/banner', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, enabled })
+          body: JSON.stringify({ text })
         });
         const data = await res.json();
         status.textContent = data.message;
@@ -264,7 +260,6 @@
         const res = await fetch('/api/banner');
         const data = await res.json();
         document.getElementById('bannerText').value = data.text || '';
-        document.getElementById('bannerEnabled').checked = data.enabled !== false;
       } catch (e) {}
     }
 

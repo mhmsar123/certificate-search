@@ -231,26 +231,23 @@ app.post('/api/search', async (req, res) => {
 });
 
 const bannerPath = path.join(dataDir, 'banner.json');
+const DEFAULT_BANNER = 'بشرى سارة: تم إضافة شهادات جديدة يمكنكم الآن البحث عنها';
 
 app.get('/api/banner', (req, res) => {
-  if (!fs.existsSync(bannerPath)) {
-    return res.json({ text: '', enabled: true });
+  let text = DEFAULT_BANNER;
+  if (fs.existsSync(bannerPath)) {
+    try {
+      const banner = JSON.parse(fs.readFileSync(bannerPath, 'utf8'));
+      if (banner.text && banner.text.trim()) text = banner.text;
+    } catch (e) {}
   }
-  const banner = JSON.parse(fs.readFileSync(bannerPath, 'utf8'));
-  res.json(banner);
+  res.json({ text });
 });
 
 app.post('/api/banner', requireAuth, (req, res) => {
-  const { text, enabled } = req.body;
-  const banner = { text: text || '', enabled: enabled !== false };
-  fs.writeFileSync(bannerPath, JSON.stringify(banner));
-
-  const exec = require('child_process').exec;
-  exec('git add data/banner.json && git commit -m "update banner" && git push', { cwd: __dirname }, (err) => {
-    if (err) console.log('Git auto-save failed (expected on Render):', err.message);
-  });
-
-  res.json({ success: true, message: 'تم تحديث البانر وحفظه بشكل دائم' });
+  const { text } = req.body;
+  fs.writeFileSync(bannerPath, JSON.stringify({ text: text || '' }));
+  res.json({ success: true, message: 'تم تحديث البانر' });
 });
 
 app.get('/admin', (req, res) => {
