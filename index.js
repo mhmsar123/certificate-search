@@ -231,14 +231,13 @@ app.post('/api/search', async (req, res) => {
 });
 
 const bannerPath = path.join(dataDir, 'banner.json');
-const DEFAULT_BANNER = 'بشرى سارة: تم إضافة شهادات جديدة يمكنكم الآن البحث عنها';
 
 app.get('/api/banner', (req, res) => {
-  let text = DEFAULT_BANNER;
+  let text = '';
   if (fs.existsSync(bannerPath)) {
     try {
       const banner = JSON.parse(fs.readFileSync(bannerPath, 'utf8'));
-      if (banner.text && banner.text.trim()) text = banner.text;
+      if (banner.text) text = banner.text;
     } catch (e) {}
   }
   res.json({ text });
@@ -247,6 +246,10 @@ app.get('/api/banner', (req, res) => {
 app.post('/api/banner', requireAuth, (req, res) => {
   const { text } = req.body;
   fs.writeFileSync(bannerPath, JSON.stringify({ text: text || '' }));
+  const exec = require('child_process').exec;
+  exec('git add data/banner.json && git commit --allow-empty -m "update banner" && git push', { cwd: __dirname }, (err) => {
+    if (err) console.log('Git push failed (expected on Render):', err.message);
+  });
   res.json({ success: true, message: 'تم تحديث البانر' });
 });
 
