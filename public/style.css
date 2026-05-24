@@ -324,14 +324,14 @@ button:disabled {
 .banner-text {
   display: inline-block;
   white-space: nowrap;
-  font-size: 30px;
+  font-size: 25px;
   color: #155724;
   animation: scrollBanner 20s linear infinite;
 }
 
 @keyframes scrollBanner {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 @media (max-width: 600px) {
