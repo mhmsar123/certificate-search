@@ -230,6 +230,23 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
+const bannerPath = path.join(dataDir, 'banner.json');
+if (!fs.existsSync(bannerPath)) {
+  fs.writeFileSync(bannerPath, JSON.stringify({ text: '', enabled: false }));
+}
+
+app.get('/api/banner', (req, res) => {
+  const banner = JSON.parse(fs.readFileSync(bannerPath, 'utf8'));
+  res.json(banner);
+});
+
+app.post('/api/banner', requireAuth, (req, res) => {
+  const { text, enabled } = req.body;
+  const banner = { text: text || '', enabled: enabled !== false };
+  fs.writeFileSync(bannerPath, JSON.stringify(banner));
+  res.json({ success: true, message: 'تم تحديث البانر' });
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });

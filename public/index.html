@@ -13,6 +13,12 @@
 <body>
   <div class="container">
     <div class="school-name">مدرسة أسامة بن زيد الاعدادية بنين</div>
+    <div class="news-banner" id="newsBanner" style="display:none;">
+      <div class="banner-icon">📢</div>
+      <div class="banner-text-wrap">
+        <div class="banner-text" id="bannerTextDisplay"></div>
+      </div>
+    </div>
     <h1>بحث عن شهادة طالب</h1>
     <p class="subtitle">من فضلك اكتب الرقم الشخصي للطالب</p>
 
@@ -158,6 +164,23 @@
       pdfContainer.style.display = 'none';
       actionButtons.style.display = 'none';
     }
+
+    async function loadBanner() {
+      try {
+        const res = await fetch('/api/banner');
+        const data = await res.json();
+        const banner = document.getElementById('newsBanner');
+        const text = document.getElementById('bannerTextDisplay');
+        if (data.enabled && data.text) {
+          text.textContent = data.text;
+          banner.style.display = 'flex';
+        } else {
+          banner.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+
+    loadBanner();
   </script>
 </body>
 </html>

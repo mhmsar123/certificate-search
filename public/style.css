@@ -299,6 +299,41 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.news-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border: 1px solid #f0d060;
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin: 10px 0 20px;
+  overflow: hidden;
+}
+
+.banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.banner-text-wrap {
+  overflow: hidden;
+  flex: 1;
+}
+
+.banner-text {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 15px;
+  color: #856404;
+  animation: scrollBanner 20s linear infinite;
+}
+
+@keyframes scrollBanner {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
 @media (max-width: 600px) {
   .container {
     padding: 30px 20px;
