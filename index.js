@@ -231,11 +231,11 @@ app.post('/api/search', async (req, res) => {
 });
 
 const bannerPath = path.join(dataDir, 'banner.json');
-if (!fs.existsSync(bannerPath)) {
-  fs.writeFileSync(bannerPath, JSON.stringify({ text: '', enabled: false }));
-}
 
 app.get('/api/banner', (req, res) => {
+  if (!fs.existsSync(bannerPath)) {
+    return res.json({ text: '', enabled: true });
+  }
   const banner = JSON.parse(fs.readFileSync(bannerPath, 'utf8'));
   res.json(banner);
 });
