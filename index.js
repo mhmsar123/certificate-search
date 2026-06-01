@@ -132,6 +132,11 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
 
     fs.writeFileSync(path.join(adminDir, 'index.json'), JSON.stringify(index, null, 2));
 
+    const exec = require('child_process').exec;
+    exec('git add uploads/ && git commit -m "update certificates" && git push', { cwd: __dirname }, (err) => {
+      if (err) console.log('Git auto-save failed (expected on Render):', err.message);
+    });
+
     res.json({
       success: true,
       pages: totalPages,
