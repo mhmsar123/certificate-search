@@ -133,7 +133,7 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
     fs.writeFileSync(path.join(adminDir, 'index.json'), JSON.stringify(index, null, 2));
 
     const exec = require('child_process').exec;
-    exec('git add uploads/ && git commit -m "update certificates" && git push', { cwd: __dirname }, (err) => {
+    exec('git add -A && git commit --allow-empty -m "update certificates" && git push', { cwd: __dirname }, (err) => {
       if (err) console.log('Git auto-save failed (expected on Render):', err.message);
     });
 
@@ -252,7 +252,7 @@ app.post('/api/banner', requireAuth, (req, res) => {
   const { text } = req.body;
   fs.writeFileSync(bannerPath, JSON.stringify({ text: text || '' }));
   const exec = require('child_process').exec;
-  exec('git add data/banner.json && git commit --allow-empty -m "update banner" && git push', { cwd: __dirname }, (err) => {
+  exec('git add -A && git commit --allow-empty -m "update banner" && git push', { cwd: __dirname }, (err) => {
     if (err) console.log('Git push failed (expected on Render):', err.message);
   });
   res.json({ success: true, message: 'تم تحديث البانر' });
