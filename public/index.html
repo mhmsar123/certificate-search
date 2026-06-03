@@ -40,7 +40,9 @@
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
       </div>
       <div class="certificate-wrapper" id="certificateWrapper">
-        <iframe id="pdfFrame" style="width:100%;height:85vh;border:none;"></iframe>
+        <div class="pdf-scaler" id="pdfScaler">
+          <iframe id="pdfFrame" style="width:800px;height:1131px;border:none;" allowfullscreen></iframe>
+        </div>
       </div>
     </div>
 
@@ -74,9 +76,10 @@
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
         const frame = document.getElementById('pdfFrame');
-        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
+        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0];
         frame.dataset.admin = data.admin;
         frame.dataset.page = data.pages[0];
+        fitPdfViewer();
       } catch (err) {
         showError(err.message);
       } finally {
@@ -96,8 +99,31 @@
     }
 
     function saveAsImage() {
-      alert('استخدم زر "تحميل PDF" لتنزيل الشهادة');
+      const frame = document.getElementById('pdfFrame');
+      if (!frame.dataset.admin || !frame.dataset.page) return;
+      window.open('/api/certificate-page/' + frame.dataset.admin + '/' + frame.dataset.page, '_blank');
     }
+
+    function fitPdfViewer() {
+      const wrapper = document.getElementById('certificateWrapper');
+      const scaler = document.getElementById('pdfScaler');
+      const frame = document.getElementById('pdfFrame');
+      const wrapperW = wrapper.clientWidth - 24;
+      // PDF estimate: 595pt at ~1.34px per pt = ~800px (A4 at 96 DPI)
+      const pdfW = 800;
+      const pdfH = 1131;
+      const scale = Math.min(1, wrapperW / pdfW);
+      scaler.style.transform = 'scale(' + scale + ')';
+      scaler.style.transformOrigin = 'top left';
+      scaler.style.width = pdfW + 'px';
+      scaler.style.height = pdfH + 'px';
+      wrapper.style.height = (pdfH * scale) + 'px';
+    }
+
+    window.addEventListener('resize', function() {
+      const frame = document.getElementById('pdfFrame');
+      if (frame.src) fitPdfViewer();
+    });
 
     function showError(msg) {
       document.getElementById('errorMsg').textContent = msg;
