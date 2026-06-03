@@ -40,7 +40,7 @@
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
       </div>
       <div class="certificate-wrapper" id="certificateWrapper">
-        <img id="certImage" style="width:100%;height:auto;display:block;" alt="الشهادة">
+        <iframe id="pdfFrame" style="width:100%;height:85vh;border:none;"></iframe>
       </div>
     </div>
 
@@ -73,16 +73,10 @@
         document.getElementById('pdfContainer').style.display = 'block';
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
-        const img = document.getElementById('certImage');
-        img.src = '/api/certificate-image/' + data.admin + '/' + data.pages[0];
-        img.onerror = function() {
-          // Fallback to PDF if image rendering fails
-          img.style.display = 'none';
-          const wrapper = document.getElementById('certificateWrapper');
-          wrapper.innerHTML = '<iframe src="/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH" style="width:100%;height:85vh;border:none;"></iframe>';
-        };
-        img.dataset.admin = data.admin;
-        img.dataset.page = data.pages[0];
+        const frame = document.getElementById('pdfFrame');
+        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
+        frame.dataset.admin = data.admin;
+        frame.dataset.page = data.pages[0];
       } catch (err) {
         showError(err.message);
       } finally {
@@ -96,18 +90,13 @@
     });
 
     function downloadPdf() {
-      const img = document.getElementById('certImage');
-      if (!img.dataset.admin || !img.dataset.page) return;
-      window.open('/api/certificate-page/' + img.dataset.admin + '/' + img.dataset.page, '_blank');
+      const frame = document.getElementById('pdfFrame');
+      if (!frame.dataset.admin || !frame.dataset.page) return;
+      window.open('/api/certificate-page/' + frame.dataset.admin + '/' + frame.dataset.page, '_blank');
     }
 
     function saveAsImage() {
-      const img = document.getElementById('certImage');
-      if (!img.src) return;
-      const a = document.createElement('a');
-      a.href = img.src;
-      a.download = 'shahada.png';
-      a.click();
+      alert('استخدم زر "تحميل PDF" لتنزيل الشهادة');
     }
 
     function showError(msg) {
