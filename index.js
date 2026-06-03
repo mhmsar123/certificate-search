@@ -221,36 +221,32 @@ app.post('/api/search', async (req, res) => {
       const pages = index[id];
       if (!pages || pages.length === 0) continue;
 
-      if (!createCanvas) {
-        const originalPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
-        const newPdf = await PDFDocument.create();
-        for (const pageNum of pages) {
-          const [copiedPage] = await newPdf.copyPages(originalPdf, [pageNum - 1]);
-          newPdf.addPage(copiedPage);
-        }
-        const pdfBytes = await newPdf.save();
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
-        return res.send(Buffer.from(pdfBytes));
-      }
-
       const data = new Uint8Array(fs.readFileSync(pdfPath));
       const doc = await pdfjsLib.getDocument({ data }).promise;
       const newPdf = await PDFDocument.create();
+      let renderError = false;
 
       for (const pageNum of pages) {
-        const page = await doc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1 });
-
-        const canvas = createCanvas(viewport.width, viewport.height);
-        const ctx = canvas.getContext('2d');
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        const pngBuffer = canvas.toBuffer('image/png');
-        const pngImage = await newPdf.embedPng(pngBuffer);
-        const imgPage = newPdf.addPage([pngImage.width, pngImage.height]);
-        imgPage.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
+        if (createCanvas && !renderError) {
+          try {
+            const page = await doc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1 });
+            const canvas = createCanvas(viewport.width, viewport.height);
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const pngBuffer = canvas.toBuffer('image/png');
+            const pngImage = await newPdf.embedPng(pngBuffer);
+            const imgPage = newPdf.addPage([pngImage.width, pngImage.height]);
+            imgPage.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
+            continue;
+          } catch (e) {
+            renderError = true;
+            console.log('Canvas render failed, falling back:', e.message);
+          }
+        }
+        const origPdf = await PDFDocument.load(data);
+        const [copiedPage] = await newPdf.copyPages(origPdf, [pageNum - 1]);
+        newPdf.addPage(copiedPage);
       }
 
       const pdfBytes = await newPdf.save();
