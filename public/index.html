@@ -107,74 +107,18 @@
     }
     </script>
 
-      loading.style.display = 'block';
-      errorMsg.style.display = 'none';
-      pdfContainer.style.display = 'none';
-      actionButtons.style.display = 'none';
-      searchBtn.disabled = true;
-
-      try {
-        const res = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'لم يتم العثور على الشهادة');
-        }
-
-        const data = await res.json();
-        currentPageNum = data.pages[0];
-        currentPdfUrl = data.pdfUrl;
-
-        pdfContainer.style.display = 'block';
-        actionButtons.style.display = 'flex';
-        errorMsg.style.display = 'none';
-        certificateWrapper.innerHTML = '<embed id="pdfEmbed" type="application/pdf" style="width:100%;height:600px;">';
-        document.getElementById('pdfEmbed').src = data.pdfUrl + '#page=' + data.pages[0];
-      } catch (err) {
-        showError(err.message);
-      } finally {
-        loading.style.display = 'none';
-        searchBtn.disabled = false;
-      }
-    }
-
-    function downloadPdf() {
-      if (!currentPdfUrl) return;
-      window.open(currentPdfUrl + '#page=' + currentPageNum, '_blank');
-    }
-
-    async function saveAsImage() {
-      const embed = document.getElementById('pdfEmbed');
-      if (!embed) return;
-    }
-
-    function closeImage() {
-      overlay.style.display = 'none';
-    }
-
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.style.display = 'block';
-      pdfContainer.style.display = 'none';
-      actionButtons.style.display = 'none';
-    }
-
-    async function loadBanner() {
-      try {
-        const res = await fetch('/api/banner');
-        const data = await res.json();
-        const banner = document.getElementById('newsBanner');
-        const text = document.getElementById('bannerTextDisplay');
-        text.textContent = data.text;
-        banner.style.display = 'flex';
-      } catch (e) {}
-    }
-
-    loadBanner();
-  </script>
+<script>
+async function loadBanner() {
+  try {
+    const res = await fetch('/api/banner');
+    const data = await res.json();
+    const banner = document.getElementById('newsBanner');
+    const text = document.getElementById('bannerTextDisplay');
+    text.textContent = data.text;
+    banner.style.display = 'flex';
+  } catch (e) {}
+}
+loadBanner();
+</script>
 </body>
 </html>
