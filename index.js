@@ -201,6 +201,17 @@ app.get('/api/status', requireAuth, (req, res) => {
   res.json({ hasPdf, indexedCount });
 });
 
+app.get('/api/pdf/:admin', (req, res) => {
+  const pdfPath = path.join(__dirname, 'uploads', req.params.admin, 'certificates.pdf');
+  if (!fs.existsSync(pdfPath)) return res.status(404).json({ error: 'PDF not found' });
+  const stat = fs.statSync(pdfPath);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('Content-Disposition', 'inline');
+  res.setHeader('Accept-Ranges', 'bytes');
+  fs.createReadStream(pdfPath).pipe(res);
+});
+
 app.post('/api/search', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
@@ -221,38 +232,7 @@ app.post('/api/search', async (req, res) => {
       const pages = index[id];
       if (!pages || pages.length === 0) continue;
 
-      const data = new Uint8Array(fs.readFileSync(pdfPath));
-      const doc = await pdfjsLib.getDocument({ data }).promise;
-      const newPdf = await PDFDocument.create();
-      let renderError = false;
-
-      for (const pageNum of pages) {
-        if (createCanvas && !renderError) {
-          try {
-            const page = await doc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1 });
-            const canvas = createCanvas(viewport.width, viewport.height);
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            const pngBuffer = canvas.toBuffer('image/png');
-            const pngImage = await newPdf.embedPng(pngBuffer);
-            const imgPage = newPdf.addPage([pngImage.width, pngImage.height]);
-            imgPage.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
-            continue;
-          } catch (e) {
-            renderError = true;
-            console.log('Canvas render failed, falling back:', e.message);
-          }
-        }
-        const origPdf = await PDFDocument.load(data);
-        const [copiedPage] = await newPdf.copyPages(origPdf, [pageNum - 1]);
-        newPdf.addPage(copiedPage);
-      }
-
-      const pdfBytes = await newPdf.save();
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
-      return res.send(Buffer.from(pdfBytes));
+      return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
     }
 
     res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });

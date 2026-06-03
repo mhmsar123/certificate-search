@@ -67,8 +67,9 @@
     const overlay = document.getElementById('overlay');
     const fullImage = document.getElementById('fullImage');
 
-    let currentPdfBlob = null;
+    let currentPdfDoc = null;
     let currentPdfUrl = null;
+    let currentPageNum = 1;
 
     searchBox.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') searchCertificate();
@@ -99,21 +100,15 @@
           throw new Error(data.error || 'لم يتم العثور على الشهادة');
         }
 
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          currentPdfUrl = data.pdfUrl;
-          currentPdfBlob = null;
-        } else {
-          currentPdfBlob = await res.blob();
-          currentPdfUrl = URL.createObjectURL(currentPdfBlob);
-        }
+        const data = await res.json();
+        currentPageNum = data.pages[0];
+        currentPdfUrl = data.pdfUrl;
 
         pdfContainer.style.display = 'block';
         actionButtons.style.display = 'flex';
         errorMsg.style.display = 'none';
 
-        renderPdfToCanvas(currentPdfUrl);
+        renderPdfPage(data.pdfUrl, data.pages[0]);
       } catch (err) {
         showError(err.message);
       } finally {
@@ -122,10 +117,10 @@
       }
     }
 
-    async function renderPdfToCanvas(url) {
+    async function renderPdfPage(url, pageNum) {
       try {
-        const pdf = await pdfjsLib.getDocument(url).promise;
-        const page = await pdf.getPage(1);
+        currentPdfDoc = await pdfjsLib.getDocument(url).promise;
+        const page = await currentPdfDoc.getPage(pageNum);
 
         const wrapperWidth = certificateWrapper.clientWidth || 700;
         const viewport = page.getViewport({ scale: 1 });
@@ -144,12 +139,8 @@
 
     function downloadPdf() {
       if (!currentPdfUrl) return;
-      const a = document.createElement('a');
-      a.href = currentPdfUrl;
-      a.download = 'شهادة.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = currentPdfUrl + '#page=' + currentPageNum;
+      window.open(link, '_blank');
     }
 
     async function saveAsImage() {
