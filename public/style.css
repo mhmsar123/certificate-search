@@ -126,8 +126,6 @@ h1 {
 
 .certificate-wrapper {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   background: white;
@@ -357,5 +355,8 @@ button:disabled {
   }
   .action-buttons .btn {
     max-width: none;
+  }
+  .certificate-wrapper iframe {
+    height: 60vh !important;
   }
 }
