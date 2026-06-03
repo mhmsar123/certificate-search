@@ -221,6 +221,19 @@ app.post('/api/search', async (req, res) => {
       const pages = index[id];
       if (!pages || pages.length === 0) continue;
 
+      if (!createCanvas) {
+        const originalPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
+        const newPdf = await PDFDocument.create();
+        for (const pageNum of pages) {
+          const [copiedPage] = await newPdf.copyPages(originalPdf, [pageNum - 1]);
+          newPdf.addPage(copiedPage);
+        }
+        const pdfBytes = await newPdf.save();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
+        return res.send(Buffer.from(pdfBytes));
+      }
+
       const data = new Uint8Array(fs.readFileSync(pdfPath));
       const doc = await pdfjsLib.getDocument({ data }).promise;
       const newPdf = await PDFDocument.create();
