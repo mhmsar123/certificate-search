@@ -109,7 +109,8 @@
         actionButtons.style.display = 'flex';
         errorMsg.style.display = 'none';
 
-        renderPdfPage(currentPdfUrl, currentPages[0]);
+        showError('جاري فتح الشهادة...');
+        window.open(`${currentPdfUrl}#page=${currentPages[0]}`, '_blank');
       } catch (err) {
         showError(err.message);
       } finally {
@@ -118,35 +119,9 @@
       }
     }
 
-    async function renderPdfPage(url, pageNum) {
-      try {
-        const pdf = await pdfjsLib.getDocument(url).promise;
-        const page = await pdf.getPage(pageNum);
-
-        const wrapperWidth = certificateWrapper.clientWidth || 700;
-        const viewport = page.getViewport({ scale: 1 });
-        const scale = Math.min(wrapperWidth / viewport.width, 1.5);
-        const scaledViewport = page.getViewport({ scale });
-
-        const canvas = pdfCanvas;
-        const ctx = canvas.getContext('2d');
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
-
-        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-      } catch (err) {
-        console.error('Render error:', err);
-      }
-    }
-
     function downloadPdf() {
       if (!currentPdfUrl || !currentPages.length) return;
-      const a = document.createElement('a');
-      a.href = currentPdfUrl + '#page=' + currentPages[0];
-      a.download = currentFileName + '.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      window.open(`${currentPdfUrl}#page=${currentPages[0]}`, '_blank');
     }
 
     async function saveAsImage() {

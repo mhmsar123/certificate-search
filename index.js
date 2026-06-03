@@ -195,14 +195,16 @@ app.get('/api/status', requireAuth, (req, res) => {
 });
 
 app.get('/api/pdf/:admin/:page', (req, res) => {
-  const { admin: adminName, page } = req.params;
+  const { admin: adminName } = req.params;
   const pdfPath = path.join(__dirname, 'uploads', adminName, 'certificates.pdf');
   if (!fs.existsSync(pdfPath)) return res.status(404).json({ error: 'PDF not found' });
 
-  const pdfStream = fs.createReadStream(pdfPath);
+  const stat = fs.statSync(pdfPath);
   res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('Content-Disposition', 'inline; filename="certificates.pdf"');
   res.setHeader('Accept-Ranges', 'bytes');
-  pdfStream.pipe(res);
+  fs.createReadStream(pdfPath).pipe(res);
 });
 
 app.post('/api/search', async (req, res) => {
