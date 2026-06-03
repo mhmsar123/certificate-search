@@ -67,9 +67,8 @@
     const overlay = document.getElementById('overlay');
     const fullImage = document.getElementById('fullImage');
 
-    let currentPdfDoc = null;
-    let currentPages = [];
-    let currentPdfUrl = '';
+    let currentPdfBlob = null;
+    let currentPdfUrl = null;
 
     searchBox.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') searchCertificate();
@@ -100,19 +99,21 @@
           throw new Error(data.error || 'لم يتم العثور على الشهادة');
         }
 
-        const data = await res.json();
-        currentPages = data.pages;
-        currentPdfUrl = data.pdfUrl;
-
-        currentPdfDoc = await pdfjsLib.getDocument(currentPdfUrl).promise;
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          currentPdfUrl = data.pdfUrl;
+          currentPdfBlob = null;
+        } else {
+          currentPdfBlob = await res.blob();
+          currentPdfUrl = URL.createObjectURL(currentPdfBlob);
+        }
 
         pdfContainer.style.display = 'block';
         actionButtons.style.display = 'flex';
         errorMsg.style.display = 'none';
 
-        pdfCanvas.width = 0;
-        pdfCanvas.height = 0;
-        renderPage(currentPages[0]);
+        renderPdfToCanvas(currentPdfUrl);
       } catch (err) {
         showError(err.message);
       } finally {
@@ -121,9 +122,11 @@
       }
     }
 
-    async function renderPage(pageNum) {
+    async function renderPdfToCanvas(url) {
       try {
-        const page = await currentPdfDoc.getPage(pageNum);
+        const pdf = await pdfjsLib.getDocument(url).promise;
+        const page = await pdf.getPage(1);
+
         const wrapperWidth = certificateWrapper.clientWidth || 700;
         const viewport = page.getViewport({ scale: 1 });
         const scale = Math.min(wrapperWidth / viewport.width, 1.5);
@@ -142,7 +145,7 @@
     function downloadPdf() {
       if (!currentPdfUrl) return;
       const a = document.createElement('a');
-      a.href = currentPdfUrl + '#page=' + currentPages[0];
+      a.href = currentPdfUrl;
       a.download = 'شهادة.pdf';
       document.body.appendChild(a);
       a.click();
