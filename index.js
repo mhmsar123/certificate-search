@@ -194,6 +194,17 @@ app.get('/api/status', requireAuth, (req, res) => {
   res.json({ hasPdf, indexedCount });
 });
 
+app.get('/api/pdf/:admin/:page', (req, res) => {
+  const { admin: adminName, page } = req.params;
+  const pdfPath = path.join(__dirname, 'uploads', adminName, 'certificates.pdf');
+  if (!fs.existsSync(pdfPath)) return res.status(404).json({ error: 'PDF not found' });
+
+  const pdfStream = fs.createReadStream(pdfPath);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Accept-Ranges', 'bytes');
+  pdfStream.pipe(res);
+});
+
 app.post('/api/search', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
@@ -214,18 +225,7 @@ app.post('/api/search', async (req, res) => {
       const pages = index[id];
       if (!pages || pages.length === 0) continue;
 
-      const originalPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
-      const newPdf = await PDFDocument.create();
-
-      for (const pageNum of pages) {
-        const [copiedPage] = await newPdf.copyPages(originalPdf, [pageNum - 1]);
-        newPdf.addPage(copiedPage);
-      }
-
-      const pdfBytes = await newPdf.save();
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="certificate-${id}.pdf"`);
-      return res.send(Buffer.from(pdfBytes));
+      return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}/0`, admin: adminName });
     }
 
     res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });

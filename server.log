@@ -1,0 +1,21 @@
+Warning: Cannot polyfill `DOMMatrix`, rendering may be broken: "Error: Cannot find module 'canvas'
+Require stack:
+- C:\mhm\school certi\server\node_modules\pdfjs-dist\legacy\build\pdf.js
+- C:\mhm\school certi\server\index.js".
+Warning: Cannot polyfill `Path2D`, rendering may be broken: "Error: Cannot find module 'canvas'
+Require stack:
+- C:\mhm\school certi\server\node_modules\pdfjs-dist\legacy\build\pdf.js
+- C:\mhm\school certi\server\index.js".
+Server running on http://localhost:3000
+Git auto-save failed (expected on Render): Command failed: git add -A && git commit --allow-empty -m "update certificates" && git push
+'git' is not recognized as an internal or external command,
+operable program or batch file.
+
+Git auto-save failed (expected on Render): Command failed: git add -A && git commit --allow-empty -m "update certificates" && git push
+'git' is not recognized as an internal or external command,
+operable program or batch file.
+
+Git auto-save failed (expected on Render): Command failed: git add -A && git commit --allow-empty -m "update certificates" && git push
+'git' is not recognized as an internal or external command,
+operable program or batch file.
+
