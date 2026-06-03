@@ -126,12 +126,15 @@ h1 {
 
 .certificate-wrapper {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   background: white;
   padding: 10px;
+}
+
+.pdf-scaler {
+  transform-origin: 0 0;
 }
 
 .certificate-wrapper canvas {

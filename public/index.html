@@ -40,7 +40,9 @@
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
       </div>
       <div class="certificate-wrapper" id="certificateWrapper">
-        <iframe id="pdfFrame" style="width:100%;height:85vh;border:none;"></iframe>
+        <div class="pdf-scaler" id="pdfScaler">
+          <iframe id="pdfFrame" style="width:800px;height:1131px;border:none;"></iframe>
+        </div>
       </div>
     </div>
 
@@ -74,14 +76,10 @@
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
         const frame = document.getElementById('pdfFrame');
-        // Calculate zoom to fit screen width (595pt = ~793px at 96 DPI)
-        var pdfW = 595; // PDF page width in points
-        var screenW = window.innerWidth - 40; // account for margins
-        var zoom = Math.floor((screenW / pdfW) * 100);
-        zoom = Math.min(100, Math.max(30, zoom));
-        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#zoom=' + zoom;
+        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0];
         frame.dataset.admin = data.admin;
         frame.dataset.page = data.pages[0];
+        fitPdf();
       } catch (err) {
         showError(err.message);
       } finally {
@@ -106,15 +104,27 @@
       window.open('/api/certificate-page/' + frame.dataset.admin + '/' + frame.dataset.page, '_blank');
     }
 
+    function fitPdf() {
+      var wrapper = document.getElementById('certificateWrapper');
+      var scaler = document.getElementById('pdfScaler');
+      var frame = document.getElementById('pdfFrame');
+      var w = wrapper.clientWidth - 24;
+      var pdfW = 800, pdfH = 1131;
+      var scale = w / pdfW;
+      if (scale > 1) scale = 1;
+      var scaledW = pdfW * scale;
+      var marginL = (w - scaledW) / 2;
+      scaler.style.transform = 'scale(' + scale + ')';
+      scaler.style.transformOrigin = '0 0';
+      scaler.style.marginLeft = Math.max(0, marginL) + 'px';
+      scaler.style.width = pdfW + 'px';
+      scaler.style.height = pdfH + 'px';
+      wrapper.style.height = (pdfH * scale + 4) + 'px';
+    }
+
     window.addEventListener('resize', function() {
-      const frame = document.getElementById('pdfFrame');
-      if (!frame.src) return;
-      var pdfW = 595;
-      var screenW = window.innerWidth - 40;
-      var zoom = Math.floor((screenW / pdfW) * 100);
-      zoom = Math.min(100, Math.max(30, zoom));
-      var baseUrl = frame.src.split('#')[0];
-      frame.src = baseUrl + '#zoom=' + zoom;
+      var frame = document.getElementById('pdfFrame');
+      if (frame.dataset.admin) fitPdf();
     });
 
     function showError(msg) {
