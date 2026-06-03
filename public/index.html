@@ -8,7 +8,6 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/style.css">
-  <script src="/pdfjs/build/pdf.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -41,46 +40,72 @@
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
       </div>
       <div class="certificate-wrapper" id="certificateWrapper">
-        <canvas id="pdfCanvas"></canvas>
+        <iframe id="pdfFrame" style="width:100%;height:600px;border:none;"></iframe>
       </div>
     </div>
 
-    <a href="/admin" class="admin-link">admin</a>
-    <div style="font-size:11px;color:#aaa;margin-top:5px;text-align:center;">م/ محمد ثروت</div>
-  </div>
+    <div class="overlay" id="overlay" onclick="closeImage()">
+      <img id="fullImage" alt="الشهادة">
+    </div>
 
-  <div class="overlay" id="overlay" onclick="closeImage()">
-    <img id="fullImage" alt="الشهادة">
-  </div>
+    <script>
+    async function searchCertificate() {
+      const id = document.getElementById('studentId').value.trim();
+      if (!id) { showError('من فضلك أدخل الرقم الشخصي'); return; }
 
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/build/pdf.worker.min.js';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('pdfContainer').style.display = 'none';
+      document.getElementById('actionButtons').style.display = 'none';
+      document.getElementById('searchBtn').disabled = true;
 
-    const searchBox = document.getElementById('studentId');
-    const loading = document.getElementById('loading');
-    const errorMsg = document.getElementById('errorMsg');
-    const pdfContainer = document.getElementById('pdfContainer');
-    const pdfCanvas = document.getElementById('pdfCanvas');
-    const actionButtons = document.getElementById('actionButtons');
-    const certificateWrapper = document.getElementById('certificateWrapper');
-    const searchBtn = document.getElementById('searchBtn');
-    const overlay = document.getElementById('overlay');
-    const fullImage = document.getElementById('fullImage');
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'لم يتم العثور على الشهادة');
+        }
+        const data = await res.json();
+        document.getElementById('pdfContainer').style.display = 'block';
+        document.getElementById('actionButtons').style.display = 'flex';
+        document.getElementById('errorMsg').style.display = 'none';
+        const frame = document.getElementById('pdfFrame');
+        frame.src = data.pdfUrl + '#page=' + data.pages[0];
+        frame.dataset.url = data.pdfUrl;
+        frame.dataset.page = data.pages[0];
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('searchBtn').disabled = false;
+      }
+    }
 
-    let currentPdfDoc = null;
-    let currentPdfUrl = null;
-    let currentPageNum = 1;
-
-    searchBox.addEventListener('keydown', function(e) {
+    document.getElementById('studentId').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') searchCertificate();
     });
 
-    async function searchCertificate() {
-      const id = searchBox.value.trim();
-      if (!id) {
-        showError('من فضلك أدخل الرقم الشخصي');
-        return;
-      }
+    function downloadPdf() {
+      const frame = document.getElementById('pdfFrame');
+      if (!frame.dataset.url) return;
+      window.open(frame.dataset.url + '#page=' + frame.dataset.page, '_blank');
+    }
+
+    function saveAsImage() {
+      alert('استخدم زر "تحميل PDF" لتنزيل الشهادة');
+    }
+
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('pdfContainer').style.display = 'none';
+      document.getElementById('actionButtons').style.display = 'none';
+    }
+    </script>
 
       loading.style.display = 'block';
       errorMsg.style.display = 'none';
@@ -107,8 +132,8 @@
         pdfContainer.style.display = 'block';
         actionButtons.style.display = 'flex';
         errorMsg.style.display = 'none';
-
-        renderPdfPage(data.pdfUrl, data.pages[0]);
+        certificateWrapper.innerHTML = '<embed id="pdfEmbed" type="application/pdf" style="width:100%;height:600px;">';
+        document.getElementById('pdfEmbed').src = data.pdfUrl + '#page=' + data.pages[0];
       } catch (err) {
         showError(err.message);
       } finally {
@@ -117,37 +142,14 @@
       }
     }
 
-    async function renderPdfPage(url, pageNum) {
-      try {
-        currentPdfDoc = await pdfjsLib.getDocument(url).promise;
-        const page = await currentPdfDoc.getPage(pageNum);
-
-        const wrapperWidth = certificateWrapper.clientWidth || 700;
-        const viewport = page.getViewport({ scale: 1 });
-        const scale = Math.min(wrapperWidth / viewport.width, 1.5);
-        const scaledViewport = page.getViewport({ scale });
-
-        pdfCanvas.width = scaledViewport.width;
-        pdfCanvas.height = scaledViewport.height;
-        const ctx = pdfCanvas.getContext('2d');
-
-        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-      } catch (err) {
-        console.error('Render error:', err);
-      }
-    }
-
     function downloadPdf() {
       if (!currentPdfUrl) return;
-      const link = currentPdfUrl + '#page=' + currentPageNum;
-      window.open(link, '_blank');
+      window.open(currentPdfUrl + '#page=' + currentPageNum, '_blank');
     }
 
     async function saveAsImage() {
-      if (!pdfCanvas.width) return;
-      const dataUrl = pdfCanvas.toDataURL('image/png');
-      fullImage.src = dataUrl;
-      overlay.style.display = 'flex';
+      const embed = document.getElementById('pdfEmbed');
+      if (!embed) return;
     }
 
     function closeImage() {
