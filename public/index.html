@@ -74,8 +74,8 @@
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
         const frame = document.getElementById('pdfFrame');
-        frame.src = data.pdfUrl + '#page=' + data.pages[0];
-        frame.dataset.url = data.pdfUrl;
+        frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0];
+        frame.dataset.url = '/api/certificate-page/' + data.admin + '/' + data.pages[0];
         frame.dataset.page = data.pages[0];
       } catch (err) {
         showError(err.message);
@@ -92,7 +92,7 @@
     function downloadPdf() {
       const frame = document.getElementById('pdfFrame');
       if (!frame.dataset.url) return;
-      window.open(frame.dataset.url + '#page=' + frame.dataset.page, '_blank');
+      window.open(frame.dataset.url, '_blank');
     }
 
     function saveAsImage() {

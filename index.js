@@ -212,6 +212,33 @@ app.get('/api/pdf/:admin', (req, res) => {
   fs.createReadStream(pdfPath).pipe(res);
 });
 
+app.get('/api/certificate-page/:admin/:page', async (req, res) => {
+  try {
+    const { admin, page } = req.params;
+    const pageNum = parseInt(page);
+    const pdfPath = path.join(__dirname, 'uploads', admin, 'certificates.pdf');
+    if (!fs.existsSync(pdfPath)) return res.status(404).json({ error: 'PDF not found' });
+
+    const existingPdfBytes = fs.readFileSync(pdfPath);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    if (pageNum < 1 || pageNum > pdfDoc.getPageCount()) {
+      return res.status(400).json({ error: 'Invalid page number' });
+    }
+
+    const newPdf = await PDFDocument.create();
+    const [copied] = await newPdf.copyPages(pdfDoc, [pageNum - 1]);
+    newPdf.addPage(copied);
+
+    const pdfBytes = await newPdf.save();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.send(Buffer.from(pdfBytes));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to extract page: ' + err.message });
+  }
+});
+
 app.post('/api/search', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
