@@ -132,7 +132,7 @@ h1 {
   padding: 10px;
 }
 
-.certificate-wrapper canvas {
+.certificate-wrapper img {
   display: block;
   margin: 0 auto;
   max-width: 100%;
@@ -355,8 +355,5 @@ button:disabled {
   }
   .action-buttons .btn {
     max-width: none;
-  }
-  .certificate-wrapper iframe {
-    height: 60vh !important;
   }
 }

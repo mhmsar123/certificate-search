@@ -13,6 +13,46 @@ try {
   createCanvas = null;
 }
 
+// Pureimage-based PDF page renderer (no native deps needed)
+const { make, encodePNGToStream } = (() => {
+  try {
+    return require('pureimage');
+  } catch (e) {
+    return { make: null, encodePNGToStream: null };
+  }
+})();
+
+function wrapPureimageCtx(ctx) {
+  ctx._canvas = ctx._canvas || ctx;
+  ctx.getLineDash = () => [];
+  ctx.setLineDash = () => {};
+  const origSetTransform = ctx.setTransform.bind(ctx);
+  ctx.setTransform = function (a, b, c, d, e, f) {
+    if (typeof a === 'object') { origSetTransform(a.a, a.b, a.c, a.d, a.e, a.f); }
+    else { origSetTransform(a, b, c, d, e, f); }
+  };
+  ctx.getTransform = function () {
+    return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, invertSelf() { return this; }, multiplySelf(m) { return this; } };
+  };
+  return ctx;
+}
+
+async function renderPageToPngBuffer(page, scale) {
+  const viewport = page.getViewport({ scale });
+  const w = Math.floor(viewport.width);
+  const h = Math.floor(viewport.height);
+  const canvas = make(w, h);
+  const ctx = wrapPureimageCtx(canvas.getContext('2d'));
+  canvas.getContext = () => ctx;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  const tempPath = path.join(__dirname, 'data', `temp_${Date.now()}.png`);
+  const outStream = require('fs').createWriteStream(tempPath);
+  await encodePNGToStream(canvas, outStream);
+  const buf = require('fs').readFileSync(tempPath);
+  require('fs').unlinkSync(tempPath);
+  return buf;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -236,6 +276,33 @@ app.get('/api/certificate-page/:admin/:page', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to extract page: ' + err.message });
+  }
+});
+
+app.get('/api/certificate-image/:admin/:page', async (req, res) => {
+  if (!make || !encodePNGToStream) {
+    return res.status(501).json({ error: 'Image rendering not available' });
+  }
+  try {
+    const { admin, page } = req.params;
+    const pageNum = parseInt(page);
+    const pdfPath = path.join(__dirname, 'uploads', admin, 'certificates.pdf');
+    if (!fs.existsSync(pdfPath)) return res.status(404).json({ error: 'PDF not found' });
+
+    const data = new Uint8Array(fs.readFileSync(pdfPath));
+    const doc = await pdfjsLib.getDocument({ data }).promise;
+    if (pageNum < 1 || pageNum > doc.numPages) {
+      return res.status(400).json({ error: 'Invalid page number' });
+    }
+    const pdfPage = await doc.getPage(pageNum);
+    const pngBuf = await renderPageToPngBuffer(pdfPage, 1.5);
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Length', pngBuf.length);
+    res.send(pngBuf);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to render image: ' + err.message });
   }
 });
 
