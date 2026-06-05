@@ -44,11 +44,33 @@
       </div>
     </div>
 
-    <div class="overlay" id="overlay" onclick="closeImage()">
-      <img id="fullImage" alt="الشهادة">
-    </div>
+    <a href="/admin" class="admin-link">admin</a>
+    <div class="visitor-count" id="visitorCount"></div>
+    <div style="font-size:11px;color:#aaa;margin-top:5px;text-align:center;">م/ محمد ثروت</div>
+  </div>
 
-    <script>
+  <div class="overlay" id="overlay" onclick="closeImage()">
+    <img id="fullImage" alt="الشهادة">
+  </div>
+
+  <script>
+    const searchBox = document.getElementById('studentId');
+    const loading = document.getElementById('loading');
+    const errorMsg = document.getElementById('errorMsg');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const actionButtons = document.getElementById('actionButtons');
+    const certificateWrapper = document.getElementById('certificateWrapper');
+    const searchBtn = document.getElementById('searchBtn');
+    const overlay = document.getElementById('overlay');
+    const fullImage = document.getElementById('fullImage');
+
+    let currentPdfBlob = null;
+    let currentPdfUrl = null;
+
+    searchBox.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') searchCertificate();
+    });
+
     async function searchCertificate() {
       const id = document.getElementById('studentId').value.trim();
       if (!id) { showError('من فضلك أدخل الرقم الشخصي'); return; }
@@ -85,10 +107,6 @@
       }
     }
 
-    document.getElementById('studentId').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') searchCertificate();
-    });
-
     function downloadPdf() {
       const frame = document.getElementById('pdfFrame');
       if (!frame.dataset.admin || !frame.dataset.page) return;
@@ -107,23 +125,28 @@
       document.getElementById('pdfContainer').style.display = 'none';
       document.getElementById('actionButtons').style.display = 'none';
     }
-    </script>
 
-<script>
-async function loadBanner() {
-  try {
-    const res = await fetch('/api/banner');
-    const data = await res.json();
-    const banner = document.getElementById('newsBanner');
-    const text = document.getElementById('bannerTextDisplay');
-    text.textContent = data.text;
-    banner.style.display = 'flex';
-  } catch (e) {}
-}
-loadBanner();
-</script>
+    async function loadBanner() {
+      try {
+        const res = await fetch('/api/banner');
+        const data = await res.json();
+        const banner = document.getElementById('newsBanner');
+        const text = document.getElementById('bannerTextDisplay');
+        text.textContent = data.text;
+        banner.style.display = 'flex';
+      } catch (e) {}
+    }
 
-<a class="admin-link" href="/admin">admin</a>
-<div style="font-size:11px;color:#aaa;margin-top:5px;text-align:center;">م/ محمد ثروت</div>
+    async function loadVisitors() {
+      try {
+        const res = await fetch('/api/visitors');
+        const data = await res.json();
+        document.getElementById('visitorCount').textContent = `عدد الزوار: ${data.count.toLocaleString('ar-SA')}`;
+      } catch (e) {}
+    }
+
+    loadBanner();
+    loadVisitors();
+  </script>
 </body>
 </html>

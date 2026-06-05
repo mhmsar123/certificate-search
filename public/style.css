@@ -104,6 +104,13 @@ h1 {
   color: #667eea;
 }
 
+.visitor-count {
+  margin-top: 5px;
+  color: #aaa;
+  font-size: 12px;
+  text-align: center;
+}
+
 .error-msg {
   color: #e74c3c;
   margin-top: 15px;

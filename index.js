@@ -270,6 +270,15 @@ app.post('/api/search', async (req, res) => {
 });
 
 const bannerPath = path.join(dataDir, 'banner.json');
+const visitorPath = path.join(dataDir, 'visitors.json');
+if (!fs.existsSync(visitorPath)) fs.writeFileSync(visitorPath, '0');
+
+app.get('/api/visitors', (req, res) => {
+  let count = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
+  count++;
+  fs.writeFileSync(visitorPath, String(count));
+  res.json({ count });
+});
 
 app.get('/api/banner', (req, res) => {
   let text = '';
