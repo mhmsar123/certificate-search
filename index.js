@@ -311,7 +311,7 @@ app.post('/api/search', async (req, res) => {
             const page = await doc.getPage(pages[0]);
             const textContent = await page.getTextContent();
             const text = textContent.items.map(item => item.str).join(' ');
-            studentName = text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim();
+            studentName = text.trim() ? text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim() : id;
           } catch (_) {}
           return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
@@ -332,7 +332,7 @@ app.post('/api/search', async (req, res) => {
             const page = await doc.getPage(matchedPages[0]);
             const textContent = await page.getTextContent();
             const text = textContent.items.map(item => item.str).join(' ');
-            studentName = text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim();
+            studentName = text.trim() ? text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim() : id;
           } catch (_) {}
           return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }

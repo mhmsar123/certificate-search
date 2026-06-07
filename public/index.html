@@ -125,10 +125,8 @@
         document.getElementById('errorMsg').style.display = 'none';
         document.getElementById('iframeLoading').style.display = 'block';
         document.getElementById('pageNumber').textContent = 'الصفحة ' + data.pages[0];
-        if (data.studentName) {
-          document.getElementById('studentNameValue').textContent = data.studentName;
-          document.getElementById('studentNameBox').style.display = 'flex';
-        }
+        document.getElementById('studentNameValue').textContent = data.studentName || id;
+        document.getElementById('studentNameBox').style.display = 'flex';
         const frame = document.getElementById('pdfFrame');
         frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
         frame.dataset.admin = data.admin;
