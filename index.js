@@ -315,7 +315,20 @@ app.post('/api/search', async (req, res) => {
         const pages = Array.isArray(index[id]) ? index[id] : (index[id] ? index[id].pages : null);
         if (pages && pages.length > 0) {
           logEntry.found = true;
-          const studentName = (index._pageNames && index._pageNames[pages[0]]) || id;
+          let studentName = id;
+          if (index._pageNames && index._pageNames[pages[0]]) {
+            studentName = index._pageNames[pages[0]];
+          } else {
+            try {
+              const pdfData = new Uint8Array(fs.readFileSync(pdfPath));
+              const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+              const p = await pdfDoc.getPage(pages[0]);
+              const tc = await p.getTextContent();
+              const txt = tc.items.map(i => i.str).join(' ');
+              const clean = txt.split(/\s+/).filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+              if (clean) studentName = clean.substring(0, 50).trim();
+            } catch (_) {}
+          }
           return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       } else {
@@ -330,9 +343,20 @@ app.post('/api/search', async (req, res) => {
         }
         if (matchedPages.length > 0) {
           logEntry.found = true;
+          let studentName = id;
           let index = {};
           try { index = JSON.parse(fs.readFileSync(indexPath, 'utf8')); } catch (_) {}
-          const studentName = (index._pageNames && index._pageNames[matchedPages[0]]) || id;
+          if (index._pageNames && index._pageNames[matchedPages[0]]) {
+            studentName = index._pageNames[matchedPages[0]];
+          } else {
+            try {
+              const p = await doc.getPage(matchedPages[0]);
+              const tc = await p.getTextContent();
+              const txt = tc.items.map(i => i.str).join(' ');
+              const clean = txt.split(/\s+/).filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+              if (clean) studentName = clean.substring(0, 50).trim();
+            } catch (_) {}
+          }
           return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       }
