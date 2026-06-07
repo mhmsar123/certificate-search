@@ -498,27 +498,40 @@ app.get('/api/debug-text', async (req, res) => {
     for (const d of dirs) {
       const adminDir = path.join(uploadsRoot, d);
       const pdfPath = path.join(adminDir, 'certificates.pdf');
-      const indexExists = fs.existsSync(path.join(adminDir, 'index.json'));
+      const indexPath = path.join(adminDir, 'index.json');
+      const indexExists = fs.existsSync(indexPath);
       info.adminDir = adminDir;
       info.pdfExists = fs.existsSync(pdfPath);
       info.dir = d;
       info.indexExists = indexExists;
       info.pdfPath = pdfPath;
+      if (indexExists) {
+        const rawIndex = fs.readFileSync(indexPath, 'utf8');
+        const index = JSON.parse(rawIndex);
+        info.hasPageNames = !!index._pageNames;
+        info.pageNamesCount = index._pageNames ? Object.keys(index._pageNames).length : 0;
+        info.indexKeysCount = Object.keys(index).length;
+        info.firstEntry = Object.entries(index).slice(0, 2);
+        if (index._pageNames) info.firstPageName = Object.entries(index._pageNames).slice(0, 2);
+      }
       if (fs.existsSync(pdfPath)) {
         const data = new Uint8Array(fs.readFileSync(pdfPath));
         const doc = await pdfjsLib.getDocument({ data }).promise;
         const page = await doc.getPage(1);
         const tc = await page.getTextContent();
-        const items = tc.items.map(i => ({ str: i.str, x: i.transform?.[4], y: i.transform?.[5] }));
-        const raw = tc.items.map(i => i.str).join('|');
-        const rawJoined = tc.items.map(i => i.str).join(' ');
-        const cleaned = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
+        const items = tc.items.map(i => i.str);
         info.numPages = doc.numPages;
-        info.items = items.slice(0, 20);
-        info.raw = raw.substring(0, 500);
-        info.rawJoined = rawJoined.substring(0, 500);
-        info.cleaned = cleaned.substring(0, 200);
-        info.sample = rawJoined.substring(0, 500);
+        info.firstPageItems = items.slice(0, 30);
+        const studentNameIdx = items.findIndex(s => s.includes('Student Name'));
+        info.studentNameIdx = studentNameIdx;
+        if (studentNameIdx >= 0) {
+          for (let j = studentNameIdx + 1; j < items.length; j++) {
+            if (/[\u0600-\u06FF]/.test(items[j].trim())) {
+              info.extractedName = items[j].substring(0, 50).trim();
+              break;
+            }
+          }
+        }
         break;
       }
     }
