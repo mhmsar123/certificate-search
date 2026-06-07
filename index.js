@@ -303,7 +303,17 @@ app.post('/api/search', async (req, res) => {
         const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
         const pages = index[id];
         if (pages && pages.length > 0) {
-          logEntry.found = true; return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+          logEntry.found = true;
+          let studentName = id;
+          try {
+            const data = new Uint8Array(fs.readFileSync(pdfPath));
+            const doc = await pdfjsLib.getDocument({ data }).promise;
+            const page = await doc.getPage(pages[0]);
+            const textContent = await page.getTextContent();
+            const text = textContent.items.map(item => item.str).join(' ');
+            studentName = text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim();
+          } catch (_) {}
+          return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       } else {
         const data = new Uint8Array(fs.readFileSync(pdfPath));
@@ -316,7 +326,15 @@ app.post('/api/search', async (req, res) => {
           if (text.includes(id)) matchedPages.push(i);
         }
         if (matchedPages.length > 0) {
-          logEntry.found = true; return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+          logEntry.found = true;
+          let studentName = id;
+          try {
+            const page = await doc.getPage(matchedPages[0]);
+            const textContent = await page.getTextContent();
+            const text = textContent.items.map(item => item.str).join(' ');
+            studentName = text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim();
+          } catch (_) {}
+          return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       }
     }

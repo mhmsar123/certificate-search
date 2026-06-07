@@ -33,6 +33,7 @@
       <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
     </div>
 
+    <div class="search-hint" id="searchHint">تأكد من إدخال الرقم بدون أصفار أو مسافات</div>
     <div class="total-certificates" id="totalCertificates"></div>
     <div class="update-notification" id="updateNotification" style="display:none;">
       تم تحديث الشهادات - <a href="javascript:location.reload()">اضغط للتحديث</a>
@@ -57,11 +58,13 @@
       </div>
       <div class="separator"></div>
       <div class="certificate-wrapper" id="certificateWrapper">
+        <div class="cert-name" id="certName"></div>
         <div class="iframe-loading" id="iframeLoading">
           <div class="spinner"></div>
           <p>جاري تحميل الشهادة...</p>
         </div>
         <iframe id="pdfFrame" style="width:100%;height:90vh;border:none;display:block;" onload="onPdfLoad()"></iframe>
+        <div class="page-number" id="pageNumber"></div>
       </div>
     </div>
 
@@ -116,6 +119,8 @@
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
         document.getElementById('iframeLoading').style.display = 'block';
+        document.getElementById('certName').textContent = data.studentName || '';
+        document.getElementById('pageNumber').textContent = 'الصفحة ' + data.pages[0];
         const frame = document.getElementById('pdfFrame');
         frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
         frame.dataset.admin = data.admin;

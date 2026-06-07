@@ -116,6 +116,13 @@ h1 {
   transform: translateY(-50%) scale(1.15);
 }
 
+.search-hint {
+  margin-top: 8px;
+  color: #aaa;
+  font-size: 12px;
+  text-align: center;
+}
+
 .total-certificates {
   margin-top: 10px;
   color: #888;
@@ -247,6 +254,24 @@ h1 {
   height: 1px;
   background: linear-gradient(to right, transparent, #ddd, transparent);
   margin: 0 auto 15px;
+}
+
+.cert-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.page-number {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-top: 8px;
 }
 
 .certificate-wrapper canvas {
