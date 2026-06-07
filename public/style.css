@@ -204,6 +204,31 @@ h1 {
   display: none;
 }
 
+.student-name-box {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  border: 1px solid #a5d6a7;
+  border-radius: 10px;
+  direction: rtl;
+}
+
+.student-name-label {
+  font-size: 16px;
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.student-name-value {
+  font-size: 18px;
+  color: #1b5e20;
+  font-weight: bold;
+}
+
 .success-msg {
   color: #27ae60;
   margin-top: 15px;

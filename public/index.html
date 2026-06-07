@@ -43,6 +43,11 @@
       عرض الشهادة
     </button>
 
+    <div class="student-name-box" id="studentNameBox" style="display:none;">
+      <span class="student-name-label">اسم الطالب:</span>
+      <span class="student-name-value" id="studentNameValue"></span>
+    </div>
+
     <div class="loading" id="loading">
       <div class="spinner"></div>
       <p style="margin-top:10px;color:#666;">جاري البحث...</p>
@@ -101,6 +106,7 @@
       document.getElementById('errorMsg').style.display = 'none';
       document.getElementById('pdfContainer').style.display = 'none';
       document.getElementById('actionButtons').style.display = 'none';
+      document.getElementById('studentNameBox').style.display = 'none';
       document.getElementById('searchBtn').disabled = true;
 
       try {
@@ -119,6 +125,10 @@
         document.getElementById('errorMsg').style.display = 'none';
         document.getElementById('iframeLoading').style.display = 'block';
         document.getElementById('pageNumber').textContent = 'الصفحة ' + data.pages[0];
+        if (data.studentName) {
+          document.getElementById('studentNameValue').textContent = data.studentName;
+          document.getElementById('studentNameBox').style.display = 'flex';
+        }
         const frame = document.getElementById('pdfFrame');
         frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
         frame.dataset.admin = data.admin;
@@ -162,6 +172,7 @@
       document.getElementById('errorMsg').style.display = 'block';
       document.getElementById('pdfContainer').style.display = 'none';
       document.getElementById('actionButtons').style.display = 'none';
+      document.getElementById('studentNameBox').style.display = 'none';
     }
 
     async function loadBanner() {
