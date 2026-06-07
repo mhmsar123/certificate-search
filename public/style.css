@@ -256,17 +256,6 @@ h1 {
   margin: 0 auto 15px;
 }
 
-.cert-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  text-align: center;
-  margin-bottom: 10px;
-  padding: 8px;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
 .page-number {
   font-size: 12px;
   color: #999;
