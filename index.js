@@ -346,11 +346,13 @@ app.post('/api/search', async (req, res) => {
               const p = await pdfDoc.getPage(pages[0]);
               const tc = await p.getTextContent();
               const items = tc.items.map(i => i.str);
-              const idx = items.findIndex(s => s.includes('Student Name'));
-              if (idx >= 0) {
-                for (let j = idx + 1; j < items.length; j++) {
-                  const s = items[j].trim();
-                  if (/[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+              for (let j = 0; j < items.length; j++) {
+                if (items[j] && items[j].indexOf('Student Name') !== -1) {
+                  for (let k = j + 1; k < items.length; k++) {
+                    const s = items[k].trim();
+                    if (s && /[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                  }
+                  break;
                 }
               }
             } catch (_) {}
@@ -379,11 +381,13 @@ app.post('/api/search', async (req, res) => {
               const p = await doc.getPage(matchedPages[0]);
               const tc = await p.getTextContent();
               const items = tc.items.map(i => i.str);
-              const idx = items.findIndex(s => s.includes('Student Name'));
-              if (idx >= 0) {
-                for (let j = idx + 1; j < items.length; j++) {
-                  const s = items[j].trim();
-                  if (/[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+              for (let j = 0; j < items.length; j++) {
+                if (items[j] && items[j].indexOf('Student Name') !== -1) {
+                  for (let k = j + 1; k < items.length; k++) {
+                    const s = items[k].trim();
+                    if (s && /[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                  }
+                  break;
                 }
               }
             } catch (_) {}
