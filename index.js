@@ -324,8 +324,7 @@ app.post('/api/search', async (req, res) => {
               const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
               const p = await pdfDoc.getPage(pages[0]);
               const tc = await p.getTextContent();
-              const txt = tc.items.map(i => i.str).join(' ');
-              const clean = txt.split(/\s+/).filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+              const clean = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
               if (clean) studentName = clean.substring(0, 50).trim();
             } catch (_) {}
           }
@@ -352,8 +351,7 @@ app.post('/api/search', async (req, res) => {
             try {
               const p = await doc.getPage(matchedPages[0]);
               const tc = await p.getTextContent();
-              const txt = tc.items.map(i => i.str).join(' ');
-              const clean = txt.split(/\s+/).filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+              const clean = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
               if (clean) studentName = clean.substring(0, 50).trim();
             } catch (_) {}
           }
@@ -464,6 +462,26 @@ app.get('/api/stats', requireAuth, (req, res) => {
   const visitors = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
   const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
   res.json({ certificates, visitors, searches: logs.length });
+});
+
+// Debug: Extract raw text from first page of first admin's PDF
+app.get('/api/debug-text', requireAuth, async (req, res) => {
+  try {
+    const adminDir = getAdminDir(req.session.username);
+    const pdfPath = path.join(adminDir, 'certificates.pdf');
+    if (!fs.existsSync(pdfPath)) return res.json({ error: 'No PDF' });
+    const data = new Uint8Array(fs.readFileSync(pdfPath));
+    const doc = await pdfjsLib.getDocument({ data }).promise;
+    const page = await doc.getPage(1);
+    const tc = await page.getTextContent();
+    const items = tc.items.map(i => ({ str: i.str, x: i.transform?.[4], y: i.transform?.[5] }));
+    const raw = tc.items.map(i => i.str).join('|');
+    const rawJoined = tc.items.map(i => i.str).join(' ');
+    const cleaned = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
+    res.json({ numPages: doc.numPages, items, raw, rawJoined, cleaned, sample: rawJoined.substring(0, 500) });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
 });
 
 app.get('/admin-mhm', (req, res) => {
