@@ -156,7 +156,19 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
       const numbers = text.match(/\b\d{4,}\b/g) || [];
       const pageNum = i + existingPageCount;
 
-      const nameText = items.filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+      // Extract student name: find Arabic text after "Student Name" or before "اسم الطالب"
+      let nameText = '';
+      const studentNameIdx = items.findIndex(s => s.includes('Student Name'));
+      if (studentNameIdx >= 0) {
+        for (let j = studentNameIdx + 1; j < items.length; j++) {
+          const s = items[j].trim();
+          if (/[\u0600-\u06FF]/.test(s)) { nameText = s; break; }
+        }
+      }
+      if (!nameText) {
+        const arabicItems = items.filter(s => /[\u0600-\u06FF]/.test(s.trim()));
+        nameText = arabicItems.find(s => !['اسم الطالب','اسم المدرسة','الرقم الشخصي','الفصل الدراسي','العام الدراسي','المواد الدراسية','درجة الطالب','درجة الفصل الأول','الصف','الشعبة','اسم الطالب:','الرقم الشخصي:'].includes(s.trim())) || '';
+      }
       if (nameText) pageNames[pageNum] = nameText.substring(0, 50).trim();
 
       for (const num of numbers) {
@@ -324,8 +336,14 @@ app.post('/api/search', async (req, res) => {
               const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
               const p = await pdfDoc.getPage(pages[0]);
               const tc = await p.getTextContent();
-              const clean = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
-              if (clean) studentName = clean.substring(0, 50).trim();
+              const items = tc.items.map(i => i.str);
+              const idx = items.findIndex(s => s.includes('Student Name'));
+              if (idx >= 0) {
+                for (let j = idx + 1; j < items.length; j++) {
+                  const s = items[j].trim();
+                  if (/[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                }
+              }
             } catch (_) {}
           }
           return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
@@ -351,8 +369,14 @@ app.post('/api/search', async (req, res) => {
             try {
               const p = await doc.getPage(matchedPages[0]);
               const tc = await p.getTextContent();
-              const clean = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
-              if (clean) studentName = clean.substring(0, 50).trim();
+              const items = tc.items.map(i => i.str);
+              const idx = items.findIndex(s => s.includes('Student Name'));
+              if (idx >= 0) {
+                for (let j = idx + 1; j < items.length; j++) {
+                  const s = items[j].trim();
+                  if (/[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                }
+              }
             } catch (_) {}
           }
           return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
