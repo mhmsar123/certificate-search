@@ -38,6 +38,7 @@
       <div class="action-buttons" id="actionButtons" style="display:none;">
         <button class="btn btn-download" onclick="downloadPdf()">تحميل PDF</button>
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
+        <button class="btn btn-whatsapp" onclick="shareWhatsApp()">مشاركة واتساب</button>
       </div>
       <div class="certificate-wrapper" id="certificateWrapper">
         <iframe id="pdfFrame" style="width:100%;height:90vh;border:none;display:block;"></iframe>
@@ -117,6 +118,13 @@
       const frame = document.getElementById('pdfFrame');
       if (!frame.dataset.admin || !frame.dataset.page) return;
       window.open('/api/certificate-page/' + frame.dataset.admin + '/' + frame.dataset.page, '_blank');
+    }
+
+    function shareWhatsApp() {
+      const id = document.getElementById('studentId').value.trim();
+      const url = window.location.origin + '/api/certificate-page/' + document.getElementById('pdfFrame').dataset.admin + '/' + document.getElementById('pdfFrame').dataset.page;
+      const text = encodeURIComponent(`شهادة طالب - الرقم الشخصي: ${id}\n\n${url}`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
     }
 
     function showError(msg) {

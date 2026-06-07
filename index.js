@@ -118,37 +118,62 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
   try {
     const adminDir = getAdminDir(req.session.username);
     const pdfPath = path.join(adminDir, 'certificates.pdf');
-    const data = new Uint8Array(fs.readFileSync(pdfPath));
+    const indexPath = path.join(adminDir, 'index.json');
+    const uploadedBytes = fs.readFileSync(req.file.path);
 
+    let existingIndex = {};
+    let existingPageCount = 0;
+    let mergedPdf = await PDFDocument.create();
+
+    if (fs.existsSync(pdfPath)) {
+      const existingPdf = await PDFDocument.load(fs.readFileSync(pdfPath));
+      const existingPages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices());
+      existingPages.forEach(p => mergedPdf.addPage(p));
+      existingPageCount = existingPdf.getPageCount();
+      if (fs.existsSync(indexPath)) {
+        existingIndex = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+      }
+    }
+
+    const newPdf = await PDFDocument.load(uploadedBytes);
+    const newPages = await mergedPdf.copyPages(newPdf, newPdf.getPageIndices());
+    newPages.forEach(p => mergedPdf.addPage(p));
+
+    const mergedBytes = await mergedPdf.save();
+    fs.writeFileSync(pdfPath, Buffer.from(mergedBytes));
+
+    const data = new Uint8Array(uploadedBytes);
     const doc = await pdfjsLib.getDocument({ data }).promise;
-    const totalPages = doc.numPages;
+    const newTotalPages = doc.numPages;
+    const newIndex = {};
 
-    const index = {};
-
-    for (let i = 1; i <= totalPages; i++) {
+    for (let i = 1; i <= newTotalPages; i++) {
       const page = await doc.getPage(i);
       const textContent = await page.getTextContent();
       const text = textContent.items.map(item => item.str).join(' ');
       const numbers = text.match(/\b\d{4,}\b/g) || [];
 
       for (const num of numbers) {
-        if (!index[num]) index[num] = [];
-        if (!index[num].includes(i)) index[num].push(i);
+        if (!newIndex[num]) newIndex[num] = [];
+        if (!newIndex[num].includes(i + existingPageCount)) newIndex[num].push(i + existingPageCount);
       }
     }
 
-    fs.writeFileSync(path.join(adminDir, 'index.json'), JSON.stringify(index, null, 2));
+    for (const [key, pages] of Object.entries(existingIndex)) {
+      if (!newIndex[key]) newIndex[key] = [];
+      for (const p of pages) {
+        if (!newIndex[key].includes(p)) newIndex[key].push(p);
+      }
+    }
 
-    const exec = require('child_process').exec;
-    exec('git add -A && git commit --allow-empty -m "update certificates" && git push', { cwd: __dirname }, (err) => {
-      if (err) console.log('Git auto-save failed (expected on Render):', err.message);
-    });
+    fs.writeFileSync(indexPath, JSON.stringify(newIndex, null, 2));
 
     res.json({
       success: true,
-      pages: totalPages,
-      indexed: Object.keys(index).length,
-      message: 'PDF uploaded and indexed successfully'
+      pages: existingPageCount + newTotalPages,
+      indexed: Object.keys(newIndex).length,
+      newIndexed: Object.keys(newIndex).length - Object.keys(existingIndex).length,
+      message: 'تم إضافة الشهادات بنجاح'
     });
   } catch (err) {
     console.error(err);
@@ -244,6 +269,13 @@ app.post('/api/search', async (req, res) => {
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
 
   try {
+    const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
+    logs.push({ id, ip: req.ip, time: new Date().toISOString() });
+    if (logs.length > 200) logs.splice(0, logs.length - 200);
+    fs.writeFileSync(searchLogPath, JSON.stringify(logs));
+  } catch (e) {}
+
+  try {
     const uploadsRoot = path.join(__dirname, 'uploads');
     if (!fs.existsSync(uploadsRoot)) {
       return res.status(404).json({ error: 'No certificates uploaded yet' });
@@ -271,7 +303,9 @@ app.post('/api/search', async (req, res) => {
 
 const bannerPath = path.join(dataDir, 'banner.json');
 const visitorPath = path.join(dataDir, 'visitors.json');
+const searchLogPath = path.join(dataDir, 'search-log.json');
 if (!fs.existsSync(visitorPath)) fs.writeFileSync(visitorPath, '0');
+if (!fs.existsSync(searchLogPath)) fs.writeFileSync(searchLogPath, '[]');
 
 app.get('/api/visitors', (req, res) => {
   let count = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
@@ -299,6 +333,11 @@ app.post('/api/banner', requireAuth, (req, res) => {
     if (err) console.log('Git push failed (expected on Render):', err.message);
   });
   res.json({ success: true, message: 'تم تحديث البانر' });
+});
+
+app.get('/api/search-log', requireAuth, (req, res) => {
+  const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
+  res.json(logs.reverse().slice(0, 50));
 });
 
 app.get('/admin', (req, res) => {

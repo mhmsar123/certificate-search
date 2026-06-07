@@ -185,6 +185,17 @@ h1 {
   box-shadow: 0 10px 30px rgba(41, 128, 185, 0.4);
 }
 
+.btn-whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.btn-whatsapp:hover {
+  background: #1da851;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
+}
+
 .overlay {
   display: none;
   position: fixed;

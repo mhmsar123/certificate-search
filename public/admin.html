@@ -63,6 +63,13 @@
 
       <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
 
+      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">سجل البحث</h2>
+      <div id="searchLogContainer" style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;padding:10px;text-align:right;font-size:13px;color:#555;background:#f9f9f9;">
+        جاري التحميل...
+      </div>
+
+      <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
+
       <h2 style="font-size:20px;color:#333;margin-bottom:15px;">تغيير كلمة المرور</h2>
       <div class="login-form">
         <input type="password" id="currentPassword" placeholder="كلمة المرور الحالية">
@@ -263,6 +270,23 @@
       } catch (e) {}
     }
 
+    async function loadSearchLog() {
+      try {
+        const res = await fetch('/api/search-log');
+        const data = await res.json();
+        const container = document.getElementById('searchLogContainer');
+        if (!data.length) {
+          container.innerHTML = 'لا توجد عمليات بحث';
+          return;
+        }
+        container.innerHTML = data.map(log =>
+          `<div style="padding:5px 0;border-bottom:1px solid #eee;">🔍 <strong>${log.id}</strong> - ${new Date(log.time).toLocaleString('ar-SA')}</div>`
+        ).join('');
+      } catch (e) {
+        document.getElementById('searchLogContainer').innerHTML = 'فشل تحميل سجل البحث';
+      }
+    }
+
     async function changePassword() {
       const current = document.getElementById('currentPassword').value.trim();
       const newPw = document.getElementById('newPassword').value.trim();
@@ -338,6 +362,7 @@
       adminPanel.classList.add('active');
       welcomeMsg.textContent = username ? `مرحباً ${username}` : '';
       loadBanner();
+      loadSearchLog();
     }
 
     function showUploadStatus(msg, type) {
