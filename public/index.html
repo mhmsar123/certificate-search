@@ -50,7 +50,11 @@
       </div>
       <div class="separator"></div>
       <div class="certificate-wrapper" id="certificateWrapper">
-        <iframe id="pdfFrame" style="width:100%;height:90vh;border:none;display:block;"></iframe>
+        <div class="iframe-loading" id="iframeLoading">
+          <div class="spinner"></div>
+          <p>جاري تحميل الشهادة...</p>
+        </div>
+        <iframe id="pdfFrame" style="width:100%;height:90vh;border:none;display:block;" onload="onPdfLoad()"></iframe>
       </div>
     </div>
 
@@ -104,10 +108,14 @@
         document.getElementById('pdfContainer').style.display = 'block';
         document.getElementById('actionButtons').style.display = 'flex';
         document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('iframeLoading').style.display = 'block';
         const frame = document.getElementById('pdfFrame');
         frame.src = '/api/certificate-page/' + data.admin + '/' + data.pages[0] + '#view=FitH';
         frame.dataset.admin = data.admin;
         frame.dataset.page = data.pages[0];
+        setTimeout(() => {
+          document.getElementById('pdfContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
       } catch (err) {
         showError(err.message);
       } finally {
@@ -126,6 +134,10 @@
       const frame = document.getElementById('pdfFrame');
       if (!frame.dataset.admin || !frame.dataset.page) return;
       window.open('/api/certificate-page/' + frame.dataset.admin + '/' + frame.dataset.page, '_blank');
+    }
+
+    function onPdfLoad() {
+      document.getElementById('iframeLoading').style.display = 'none';
     }
 
     function shareWhatsApp() {
