@@ -306,7 +306,7 @@ app.post('/api/search', async (req, res) => {
       }
     }
 
-    res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم أو الاسم' });
+    res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Search failed: ' + err.message });
