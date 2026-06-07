@@ -208,7 +208,11 @@
         const res = await fetch('/api/last-update');
         const data = await res.json();
         if (lastUpdate > 0 && data.timestamp > parseInt(lastUpdate)) {
-          document.getElementById('updateNotification').style.display = 'block';
+          const lastNotified = parseInt(localStorage.getItem('lastNotified') || '0');
+          if (Date.now() - lastNotified > 300000) {
+            document.getElementById('updateNotification').style.display = 'block';
+            localStorage.setItem('lastNotified', String(Date.now()));
+          }
         }
         if (data.timestamp > 0) localStorage.setItem('lastUpdate', String(data.timestamp));
       } catch (e) {}
