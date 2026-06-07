@@ -156,25 +156,20 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
       const numbers = text.match(/\b\d{4,}\b/g) || [];
       const pageNum = i + existingPageCount;
 
-      // Log first page items for debugging
-      if (i === 1) {
-        console.log('=== FIRST PAGE ITEMS ===');
-        console.log(JSON.stringify(items.slice(0, 30)));
-      }
-
+      const ARABIC = /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFE]/;
       let nameText = '';
       for (let j = 0; j < items.length; j++) {
         if (items[j] && items[j].indexOf('Student Name') !== -1) {
           for (let k = j + 1; k < items.length; k++) {
             const s = items[k].trim();
-            if (s && /[\u0600-\u06FF]/.test(s)) { nameText = s; break; }
+            if (s && ARABIC.test(s)) { nameText = s; break; }
           }
           break;
         }
       }
       if (!nameText) {
         for (let j = 0; j < items.length; j++) {
-          if (items[j] && /[\u0600-\u06FF]/.test(items[j].trim())) {
+          if (items[j] && ARABIC.test(items[j].trim())) {
             const t = items[j].trim();
             if (t && t !== 'اسم الطالب' && t !== 'اسم المدرسة' && t !== 'الرقم الشخصي' && t !== 'الفصل الدراسي' && t !== 'العام الدراسي' && t !== 'المواد الدراسية' && t !== 'درجة الطالب' && t !== 'درجة الفصل الأول' && t !== 'الصف' && t !== 'الشعبة') {
               nameText = t;
@@ -356,7 +351,7 @@ app.post('/api/search', async (req, res) => {
                 if (items[j] && items[j].indexOf('Student Name') !== -1) {
                   for (let k = j + 1; k < items.length; k++) {
                     const s = items[k].trim();
-                    if (s && /[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                    if (s && /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
                   }
                   break;
                 }
@@ -391,7 +386,7 @@ app.post('/api/search', async (req, res) => {
                 if (items[j] && items[j].indexOf('Student Name') !== -1) {
                   for (let k = j + 1; k < items.length; k++) {
                     const s = items[k].trim();
-                    if (s && /[\u0600-\u06FF]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
+                    if (s && /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFE]/.test(s)) { studentName = s.substring(0, 50).trim(); break; }
                   }
                   break;
                 }
