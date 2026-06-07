@@ -287,14 +287,30 @@ app.post('/api/search', async (req, res) => {
       const pdfPath = path.join(uploadsRoot, adminName, 'certificates.pdf');
       if (!fs.existsSync(indexPath) || !fs.existsSync(pdfPath)) continue;
 
-      const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-      const pages = index[id];
-      if (!pages || pages.length === 0) continue;
-
-      return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+      const isNumeric = /^\d+$/.test(id);
+      if (isNumeric && id.length >= 4) {
+        const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+        const pages = index[id];
+        if (pages && pages.length > 0) {
+          return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+        }
+      } else {
+        const data = new Uint8Array(fs.readFileSync(pdfPath));
+        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const matchedPages = [];
+        for (let i = 1; i <= doc.numPages; i++) {
+          const page = await doc.getPage(i);
+          const textContent = await page.getTextContent();
+          const text = textContent.items.map(item => item.str).join(' ');
+          if (text.includes(id)) matchedPages.push(i);
+        }
+        if (matchedPages.length > 0) {
+          return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+        }
+      }
     }
 
-    res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم' });
+    res.status(404).json({ error: 'لم يتم العثور على شهادة بهذا الرقم أو الاسم' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Search failed: ' + err.message });
@@ -338,6 +354,26 @@ app.post('/api/banner', requireAuth, (req, res) => {
 app.get('/api/search-log', requireAuth, (req, res) => {
   const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
   res.json(logs.reverse().slice(0, 50));
+});
+
+app.get('/api/search-log/export', requireAuth, (req, res) => {
+  const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
+  const csv = 'الرقم,التاريخ,العنوان\n' + logs.reverse().map(l => `"${l.id}","${l.time}","${l.ip}"`).join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="search-log.csv"');
+  res.send('\uFEFF' + csv);
+});
+
+app.get('/api/stats', requireAuth, (req, res) => {
+  const adminDir = getAdminDir(req.session.username);
+  const indexPath = path.join(adminDir, 'index.json');
+  let certificates = 0;
+  if (fs.existsSync(indexPath)) {
+    try { certificates = Object.keys(JSON.parse(fs.readFileSync(indexPath, 'utf8'))).length; } catch (e) {}
+  }
+  const visitors = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
+  const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
+  res.json({ certificates, visitors, searches: logs.length });
 });
 
 app.get('/admin', (req, res) => {

@@ -63,7 +63,26 @@
 
       <hr style="margin:30px 0;border:none;border-top:1px solid #eee;">
 
-      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">سجل البحث</h2>
+      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">إحصائيات</h2>
+      <div id="statsContainer" style="display:flex;gap:15px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
+        <div style="flex:1;min-width:100px;background:#e8f5e9;padding:15px;border-radius:10px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#2e7d32;" id="statCertificates">0</div>
+          <div style="font-size:13px;color:#555;">شهادة</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:#e3f2fd;padding:15px;border-radius:10px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#1565c0;" id="statVisitors">0</div>
+          <div style="font-size:13px;color:#555;">زائر</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:#fff3e0;padding:15px;border-radius:10px;text-align:center;">
+          <div style="font-size:28px;font-weight:bold;color:#e65100;" id="statSearches">0</div>
+          <div style="font-size:13px;color:#555;">بحث</div>
+        </div>
+      </div>
+
+      <h2 style="font-size:20px;color:#333;margin-bottom:15px;">
+        سجل البحث
+        <button onclick="exportSearchLog()" style="float:left;background:#27ae60;color:white;border:none;padding:5px 15px;border-radius:8px;font-size:13px;cursor:pointer;">تصدير CSV</button>
+      </h2>
       <div id="searchLogContainer" style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;padding:10px;text-align:right;font-size:13px;color:#555;background:#f9f9f9;">
         جاري التحميل...
       </div>
@@ -287,6 +306,20 @@
       }
     }
 
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('statCertificates').textContent = data.certificates.toLocaleString('ar-SA');
+        document.getElementById('statVisitors').textContent = data.visitors.toLocaleString('ar-SA');
+        document.getElementById('statSearches').textContent = data.searches.toLocaleString('ar-SA');
+      } catch (e) {}
+    }
+
+    function exportSearchLog() {
+      window.open('/api/search-log/export', '_blank');
+    }
+
     async function changePassword() {
       const current = document.getElementById('currentPassword').value.trim();
       const newPw = document.getElementById('newPassword').value.trim();
@@ -362,6 +395,7 @@
       adminPanel.classList.add('active');
       welcomeMsg.textContent = username ? `مرحباً ${username}` : '';
       loadBanner();
+      loadStats();
       loadSearchLog();
     }
 
