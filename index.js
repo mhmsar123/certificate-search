@@ -507,50 +507,40 @@ app.get('/api/debug-text', async (req, res) => {
     const uploadsRoot = path.join(__dirname, 'uploads');
     if (!fs.existsSync(uploadsRoot)) return res.json({ error: 'No uploads dir', dir: uploadsRoot, exists: false });
     const dirs = fs.readdirSync(uploadsRoot);
-    const info = { dirs, adminDir: null, pdfExists: false };
+    const info = { dirs };
     for (const d of dirs) {
+      if (d === '.gitkeep') continue;
       const adminDir = path.join(uploadsRoot, d);
+      if (!fs.statSync(adminDir).isDirectory()) continue;
       const pdfPath = path.join(adminDir, 'certificates.pdf');
       const indexPath = path.join(adminDir, 'index.json');
-      const indexExists = fs.existsSync(indexPath);
-      info.adminDir = adminDir;
-      info.pdfExists = fs.existsSync(pdfPath);
       info.dir = d;
-      info.indexExists = indexExists;
-      info.pdfPath = pdfPath;
-      if (indexExists) {
-        const rawIndex = fs.readFileSync(indexPath, 'utf8');
-        const index = JSON.parse(rawIndex);
+      info.pdfExists = fs.existsSync(pdfPath);
+      info.indexExists = fs.existsSync(indexPath);
+      if (fs.existsSync(indexPath)) {
+        const raw = fs.readFileSync(indexPath, 'utf8');
+        info.indexSize = raw.length;
+        info.indexStart = raw.substring(0, 500);
+        const index = JSON.parse(raw);
         info.hasPageNames = !!index._pageNames;
         info.pageNamesCount = index._pageNames ? Object.keys(index._pageNames).length : 0;
         info.indexKeysCount = Object.keys(index).length;
-        info.firstEntry = Object.entries(index).slice(0, 2);
-        if (index._pageNames) info.firstPageName = Object.entries(index._pageNames).slice(0, 2);
+        if (index._pageNames && Object.keys(index._pageNames).length > 0) {
+          const firstKey = Object.keys(index._pageNames)[0];
+          info.firstPageNameKey = firstKey;
+          info.firstPageNameVal = index._pageNames[firstKey];
+        }
       }
       if (fs.existsSync(pdfPath)) {
         const data = new Uint8Array(fs.readFileSync(pdfPath));
         const doc = await pdfjsLib.getDocument({ data }).promise;
-        const page = await doc.getPage(1);
-        const tc = await page.getTextContent();
-        const items = tc.items.map(i => i.str);
         info.numPages = doc.numPages;
-        info.firstPageItems = items.slice(0, 30);
-        const studentNameIdx = items.findIndex(s => s.includes('Student Name'));
-        info.studentNameIdx = studentNameIdx;
-        if (studentNameIdx >= 0) {
-          for (let j = studentNameIdx + 1; j < items.length; j++) {
-            if (/[\u0600-\u06FF]/.test(items[j].trim())) {
-              info.extractedName = items[j].substring(0, 50).trim();
-              break;
-            }
-          }
-        }
         break;
       }
     }
     res.json(info);
   } catch (e) {
-    res.json({ error: e.message, stack: e.stack?.substring(0, 200) });
+    res.json({ error: e.message, stack: e.stack?.substring(0, 300) });
   }
 });
 
