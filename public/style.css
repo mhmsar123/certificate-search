@@ -211,21 +211,21 @@ h1 {
   gap: 8px;
   margin-top: 15px;
   padding: 12px 18px;
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  border: 1px solid #a5d6a7;
+  background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+  border: 1px solid #f48fb1;
   border-radius: 10px;
   direction: rtl;
 }
 
 .student-name-label {
   font-size: 16px;
-  color: #2e7d32;
+  color: #c2185b;
   font-weight: bold;
 }
 
 .student-name-value {
   font-size: 18px;
-  color: #1b5e20;
+  color: #880e4f;
   font-weight: bold;
 }
 
