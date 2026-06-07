@@ -299,7 +299,7 @@
           return;
         }
         container.innerHTML = data.map(log =>
-          `<div style="padding:5px 0;border-bottom:1px solid #eee;">🔍 <strong>${log.id}</strong> - ${new Date(log.time).toLocaleString('ar-SA')}</div>`
+          `<div style="padding:5px 0;border-bottom:1px solid #eee;">${log.found ? '✅' : '❌'} <strong>${log.id}</strong> - ${new Date(log.time).toLocaleString('ar-SA')}</div>`
         ).join('');
       } catch (e) {
         document.getElementById('searchLogContainer').innerHTML = 'فشل تحميل سجل البحث';

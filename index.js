@@ -268,16 +268,12 @@ app.post('/api/search', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
 
-  try {
-    const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
-    logs.push({ id, ip: req.ip, time: new Date().toISOString() });
-    if (logs.length > 200) logs.splice(0, logs.length - 200);
-    fs.writeFileSync(searchLogPath, JSON.stringify(logs));
-  } catch (e) {}
+  const logEntry = { id, ip: req.ip, time: new Date().toISOString(), found: false };
 
   try {
     const uploadsRoot = path.join(__dirname, 'uploads');
     if (!fs.existsSync(uploadsRoot)) {
+      logEntry.found = false;
       return res.status(404).json({ error: 'No certificates uploaded yet' });
     }
 
@@ -292,7 +288,7 @@ app.post('/api/search', async (req, res) => {
         const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
         const pages = index[id];
         if (pages && pages.length > 0) {
-          return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+          logEntry.found = true; return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
         }
       } else {
         const data = new Uint8Array(fs.readFileSync(pdfPath));
@@ -305,7 +301,7 @@ app.post('/api/search', async (req, res) => {
           if (text.includes(id)) matchedPages.push(i);
         }
         if (matchedPages.length > 0) {
-          return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
+          logEntry.found = true; return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
         }
       }
     }
@@ -314,6 +310,13 @@ app.post('/api/search', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Search failed: ' + err.message });
+  } finally {
+    try {
+      const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
+      logs.push(logEntry);
+      if (logs.length > 200) logs.splice(0, logs.length - 200);
+      fs.writeFileSync(searchLogPath, JSON.stringify(logs));
+    } catch (e) {}
   }
 });
 
@@ -358,7 +361,7 @@ app.get('/api/search-log', requireAuth, (req, res) => {
 
 app.get('/api/search-log/export', requireAuth, (req, res) => {
   const logs = JSON.parse(fs.readFileSync(searchLogPath, 'utf8'));
-  const csv = 'الرقم,التاريخ,العنوان\n' + logs.reverse().map(l => `"${l.id}","${l.time}","${l.ip}"`).join('\n');
+  const csv = 'الرقم,التاريخ,العنوان,النتيجة\n' + logs.reverse().map(l => `"${l.id}","${l.time}","${l.ip}","${l.found ? 'موجود' : 'غير موجود'}"`).join('\n');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="search-log.csv"');
   res.send('\uFEFF' + csv);
