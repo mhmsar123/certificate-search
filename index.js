@@ -468,23 +468,39 @@ app.get('/api/stats', requireAuth, (req, res) => {
 app.get('/api/debug-text', async (req, res) => {
   try {
     const uploadsRoot = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsRoot)) return res.json({ error: 'No uploads dir' });
+    if (!fs.existsSync(uploadsRoot)) return res.json({ error: 'No uploads dir', dir: uploadsRoot, exists: false });
     const dirs = fs.readdirSync(uploadsRoot);
-    if (!dirs.length) return res.json({ error: 'No admin dirs' });
-    const adminDir = path.join(uploadsRoot, dirs[0]);
-    const pdfPath = path.join(adminDir, 'certificates.pdf');
-    if (!fs.existsSync(pdfPath)) return res.json({ error: 'No PDF' });
-    const data = new Uint8Array(fs.readFileSync(pdfPath));
-    const doc = await pdfjsLib.getDocument({ data }).promise;
-    const page = await doc.getPage(1);
-    const tc = await page.getTextContent();
-    const items = tc.items.map(i => ({ str: i.str, x: i.transform?.[4], y: i.transform?.[5] }));
-    const raw = tc.items.map(i => i.str).join('|');
-    const rawJoined = tc.items.map(i => i.str).join(' ');
-    const cleaned = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
-    res.json({ numPages: doc.numPages, items, raw, rawJoined, cleaned, sample: rawJoined.substring(0, 500) });
+    const info = { dirs, adminDir: null, pdfExists: false };
+    for (const d of dirs) {
+      const adminDir = path.join(uploadsRoot, d);
+      const pdfPath = path.join(adminDir, 'certificates.pdf');
+      const indexExists = fs.existsSync(path.join(adminDir, 'index.json'));
+      info.adminDir = adminDir;
+      info.pdfExists = fs.existsSync(pdfPath);
+      info.dir = d;
+      info.indexExists = indexExists;
+      info.pdfPath = pdfPath;
+      if (fs.existsSync(pdfPath)) {
+        const data = new Uint8Array(fs.readFileSync(pdfPath));
+        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const page = await doc.getPage(1);
+        const tc = await page.getTextContent();
+        const items = tc.items.map(i => ({ str: i.str, x: i.transform?.[4], y: i.transform?.[5] }));
+        const raw = tc.items.map(i => i.str).join('|');
+        const rawJoined = tc.items.map(i => i.str).join(' ');
+        const cleaned = tc.items.map(i => i.str).join('').replace(/[\d\s]+/g, ' ').trim();
+        info.numPages = doc.numPages;
+        info.items = items.slice(0, 20);
+        info.raw = raw.substring(0, 500);
+        info.rawJoined = rawJoined.substring(0, 500);
+        info.cleaned = cleaned.substring(0, 200);
+        info.sample = rawJoined.substring(0, 500);
+        break;
+      }
+    }
+    res.json(info);
   } catch (e) {
-    res.json({ error: e.message });
+    res.json({ error: e.message, stack: e.stack?.substring(0, 200) });
   }
 });
 
