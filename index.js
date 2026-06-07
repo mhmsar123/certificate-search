@@ -264,11 +264,26 @@ app.get('/api/certificate-page/:admin/:page', async (req, res) => {
   }
 });
 
+const searchRateMap = new Map();
+
 app.post('/api/search', async (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Personal ID is required' });
 
-  const logEntry = { id, ip: req.ip, time: new Date().toISOString(), found: false };
+  const ip = req.ip;
+  const now = Date.now();
+  if (searchRateMap.has(ip)) {
+    const timestamps = searchRateMap.get(ip).filter(t => now - t < 60000);
+    if (timestamps.length >= 3) {
+      return res.status(429).json({ error: 'طلبات البحث كثيرة جداً. انتظر دقيقة' });
+    }
+    timestamps.push(now);
+    searchRateMap.set(ip, timestamps);
+  } else {
+    searchRateMap.set(ip, [now]);
+  }
+
+  const logEntry = { id, ip, time: new Date().toISOString(), found: false };
 
   try {
     const uploadsRoot = path.join(__dirname, 'uploads');
@@ -341,6 +356,22 @@ app.get('/api/total-certificates', (req, res) => {
   res.json({ total });
 });
 
+app.get('/api/last-update', (req, res) => {
+  let latest = 0;
+  const uploadsRoot = path.join(__dirname, 'uploads');
+  if (fs.existsSync(uploadsRoot)) {
+    const dirs = fs.readdirSync(uploadsRoot);
+    for (const d of dirs) {
+      const pdfPath = path.join(uploadsRoot, d, 'certificates.pdf');
+      if (fs.existsSync(pdfPath)) {
+        const mtime = fs.statSync(pdfPath).mtimeMs;
+        if (mtime > latest) latest = mtime;
+      }
+    }
+  }
+  res.json({ timestamp: latest });
+});
+
 app.get('/api/visitors', (req, res) => {
   let count = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
   count++;
@@ -394,8 +425,12 @@ app.get('/api/stats', requireAuth, (req, res) => {
   res.json({ certificates, visitors, searches: logs.length });
 });
 
-app.get('/admin', (req, res) => {
+app.get('/admin-mhm', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.status(404).send('الصفحة غير موجودة');
 });
 
 app.listen(PORT, '0.0.0.0', () => {

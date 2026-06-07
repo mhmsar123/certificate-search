@@ -24,6 +24,9 @@
     <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
 
     <div class="total-certificates" id="totalCertificates"></div>
+    <div class="update-notification" id="updateNotification" style="display:none;">
+      تم تحديث الشهادات - <a href="javascript:location.reload()">اضغط للتحديث</a>
+    </div>
 
     <button class="btn btn-primary" id="searchBtn" onclick="searchCertificate()">
       عرض الشهادة
@@ -47,7 +50,7 @@
       </div>
     </div>
 
-    <a href="/admin" class="admin-link">admin</a>
+    <a href="/admin-mhm" class="admin-link" style="opacity:0.3;font-size:11px;">admin</a>
     <div class="visitor-count" id="visitorCount"></div>
     <div style="font-size:13px;color:#aaa;margin-top:5px;text-align:center;">م/ محمد ثروت</div>
   </div>
@@ -165,9 +168,22 @@
       } catch (e) {}
     }
 
+    async function pollUpdates() {
+      const lastUpdate = localStorage.getItem('lastUpdate') || 0;
+      try {
+        const res = await fetch('/api/last-update');
+        const data = await res.json();
+        if (lastUpdate > 0 && data.timestamp > parseInt(lastUpdate)) {
+          document.getElementById('updateNotification').style.display = 'block';
+        }
+        if (data.timestamp > 0) localStorage.setItem('lastUpdate', String(data.timestamp));
+      } catch (e) {}
+    }
+
     loadBanner();
     loadVisitors();
     loadTotalCertificates();
+    setInterval(pollUpdates, 30000);
   </script>
 </body>
 </html>
