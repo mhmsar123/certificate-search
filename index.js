@@ -146,26 +146,37 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
     const doc = await pdfjsLib.getDocument({ data }).promise;
     const newTotalPages = doc.numPages;
     const newIndex = {};
+    const pageNames = {};
 
     for (let i = 1; i <= newTotalPages; i++) {
       const page = await doc.getPage(i);
       const textContent = await page.getTextContent();
-      const text = textContent.items.map(item => item.str).join(' ');
+      const items = textContent.items.map(item => item.str);
+      const text = items.join(' ');
       const numbers = text.match(/\b\d{4,}\b/g) || [];
+      const pageNum = i + existingPageCount;
+
+      const nameText = items.filter(s => !/^\d+$/.test(s.trim()) && s.trim()).join(' ').trim();
+      if (nameText) pageNames[pageNum] = nameText.substring(0, 50).trim();
 
       for (const num of numbers) {
         if (!newIndex[num]) newIndex[num] = [];
-        if (!newIndex[num].includes(i + existingPageCount)) newIndex[num].push(i + existingPageCount);
+        if (!newIndex[num].includes(pageNum)) newIndex[num].push(pageNum);
       }
     }
 
     for (const [key, pages] of Object.entries(existingIndex)) {
+      if (key === '_pageNames') {
+        Object.assign(pageNames, pages);
+        continue;
+      }
       if (!newIndex[key]) newIndex[key] = [];
       for (const p of pages) {
         if (!newIndex[key].includes(p)) newIndex[key].push(p);
       }
     }
 
+    newIndex._pageNames = pageNames;
     fs.writeFileSync(indexPath, JSON.stringify(newIndex, null, 2));
 
     res.json({
@@ -301,18 +312,10 @@ app.post('/api/search', async (req, res) => {
       const isNumeric = /^\d+$/.test(id);
       if (isNumeric && id.length >= 4) {
         const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-        const pages = index[id];
+        const pages = Array.isArray(index[id]) ? index[id] : (index[id] ? index[id].pages : null);
         if (pages && pages.length > 0) {
           logEntry.found = true;
-          let studentName = id;
-          try {
-            const data = new Uint8Array(fs.readFileSync(pdfPath));
-            const doc = await pdfjsLib.getDocument({ data }).promise;
-            const page = await doc.getPage(pages[0]);
-            const textContent = await page.getTextContent();
-            const text = textContent.items.map(item => item.str).join(' ');
-            studentName = text.trim() ? text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim() : id;
-          } catch (_) {}
+          const studentName = (index._pageNames && index._pageNames[pages[0]]) || id;
           return res.json({ success: true, pages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       } else {
@@ -327,13 +330,9 @@ app.post('/api/search', async (req, res) => {
         }
         if (matchedPages.length > 0) {
           logEntry.found = true;
-          let studentName = id;
-          try {
-            const page = await doc.getPage(matchedPages[0]);
-            const textContent = await page.getTextContent();
-            const text = textContent.items.map(item => item.str).join(' ');
-            studentName = text.trim() ? text.split(/\s+/).slice(0, 5).join(' ').substring(0, 60).trim() : id;
-          } catch (_) {}
+          let index = {};
+          try { index = JSON.parse(fs.readFileSync(indexPath, 'utf8')); } catch (_) {}
+          const studentName = (index._pageNames && index._pageNames[matchedPages[0]]) || id;
           return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName, studentName });
         }
       }
