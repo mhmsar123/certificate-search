@@ -465,9 +465,13 @@ app.get('/api/stats', requireAuth, (req, res) => {
 });
 
 // Debug: Extract raw text from first page of first admin's PDF
-app.get('/api/debug-text', requireAuth, async (req, res) => {
+app.get('/api/debug-text', async (req, res) => {
   try {
-    const adminDir = getAdminDir(req.session.username);
+    const uploadsRoot = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsRoot)) return res.json({ error: 'No uploads dir' });
+    const dirs = fs.readdirSync(uploadsRoot);
+    if (!dirs.length) return res.json({ error: 'No admin dirs' });
+    const adminDir = path.join(uploadsRoot, dirs[0]);
     const pdfPath = path.join(adminDir, 'certificates.pdf');
     if (!fs.existsSync(pdfPath)) return res.json({ error: 'No PDF' });
     const data = new Uint8Array(fs.readFileSync(pdfPath));
