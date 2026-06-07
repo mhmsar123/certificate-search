@@ -293,12 +293,13 @@ app.post('/api/search', async (req, res) => {
       } else {
         const data = new Uint8Array(fs.readFileSync(pdfPath));
         const doc = await pdfjsLib.getDocument({ data }).promise;
+        const words = id.trim().split(/\s+/).filter(w => w.length > 0);
         const matchedPages = [];
         for (let i = 1; i <= doc.numPages; i++) {
           const page = await doc.getPage(i);
           const textContent = await page.getTextContent();
           const text = textContent.items.map(item => item.str).join(' ');
-          if (text.includes(id)) matchedPages.push(i);
+          if (words.some(word => text.includes(word))) matchedPages.push(i);
         }
         if (matchedPages.length > 0) {
           logEntry.found = true; return res.json({ success: true, pages: matchedPages, pdfUrl: `/api/pdf/${adminName}`, admin: adminName });
