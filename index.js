@@ -156,20 +156,29 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
       const numbers = text.match(/\b\d{4,}\b/g) || [];
       const pageNum = i + existingPageCount;
 
-      // Extract student name: find Arabic text after "Student Name" or before "اسم الطالب"
       let nameText = '';
-      const studentNameIdx = items.findIndex(s => s.includes('Student Name'));
-      if (studentNameIdx >= 0) {
-        for (let j = studentNameIdx + 1; j < items.length; j++) {
-          const s = items[j].trim();
-          if (/[\u0600-\u06FF]/.test(s)) { nameText = s; break; }
+      for (let j = 0; j < items.length; j++) {
+        if (items[j] && items[j].indexOf('Student Name') !== -1) {
+          for (let k = j + 1; k < items.length; k++) {
+            const s = items[k].trim();
+            if (s && /[\u0600-\u06FF]/.test(s)) { nameText = s; break; }
+          }
+          break;
         }
       }
       if (!nameText) {
-        const arabicItems = items.filter(s => /[\u0600-\u06FF]/.test(s.trim()));
-        nameText = arabicItems.find(s => !['اسم الطالب','اسم المدرسة','الرقم الشخصي','الفصل الدراسي','العام الدراسي','المواد الدراسية','درجة الطالب','درجة الفصل الأول','الصف','الشعبة','اسم الطالب:','الرقم الشخصي:'].includes(s.trim())) || '';
+        for (let j = 0; j < items.length; j++) {
+          if (items[j] && /[\u0600-\u06FF]/.test(items[j].trim())) {
+            const t = items[j].trim();
+            if (t && t !== 'اسم الطالب' && t !== 'اسم المدرسة' && t !== 'الرقم الشخصي' && t !== 'الفصل الدراسي' && t !== 'العام الدراسي' && t !== 'المواد الدراسية' && t !== 'درجة الطالب' && t !== 'درجة الفصل الأول' && t !== 'الصف' && t !== 'الشعبة') {
+              nameText = t;
+              break;
+            }
+          }
+        }
       }
       if (nameText) pageNames[pageNum] = nameText.substring(0, 50).trim();
+      console.log('Page ' + i + ': name=' + (nameText || '(empty)'));
 
       for (const num of numbers) {
         if (!newIndex[num]) newIndex[num] = [];
