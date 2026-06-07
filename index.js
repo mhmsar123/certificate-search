@@ -45,7 +45,7 @@ const upload = multer({
     destination: (req, file, cb) => {
       cb(null, getAdminDir(req.session.username));
     },
-    filename: (req, file, cb) => cb(null, 'certificates.pdf')
+    filename: (req, file, cb) => cb(null, 'upload-temp.pdf')
   }),
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') cb(null, true);
@@ -201,6 +201,8 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
     newIndex._pageNames = pageNames;
     fs.writeFileSync(indexPath, JSON.stringify(newIndex, null, 2));
 
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+
     res.json({
       success: true,
       pages: existingPageCount + newTotalPages,
@@ -219,9 +221,11 @@ app.post('/api/delete-certificates', requireAuth, (req, res) => {
   const pdfPath = path.join(adminDir, 'certificates.pdf');
   const indexPath = path.join(adminDir, 'index.json');
 
+  const tempPath = path.join(adminDir, 'upload-temp.pdf');
   let deleted = false;
   if (fs.existsSync(pdfPath)) { fs.unlinkSync(pdfPath); deleted = true; }
   if (fs.existsSync(indexPath)) { fs.unlinkSync(indexPath); deleted = true; }
+  if (fs.existsSync(tempPath)) { fs.unlinkSync(tempPath); }
 
   res.json({ success: true, deleted, message: deleted ? 'تم مسح جميع الشهادات' : 'لا توجد شهادات للمسح' });
 });
