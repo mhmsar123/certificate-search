@@ -21,7 +21,10 @@
     <h1>بحث عن شهادة طالب</h1>
     <p class="subtitle">من فضلك اكتب الرقم الشخصي للطالب</p>
 
-    <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
+    </div>
 
     <div class="total-certificates" id="totalCertificates"></div>
     <div class="update-notification" id="updateNotification" style="display:none;">
@@ -45,6 +48,7 @@
         <button class="btn btn-image" onclick="saveAsImage()">حفظ كصورة</button>
         <button class="btn btn-whatsapp" onclick="shareWhatsApp()">مشاركة واتساب</button>
       </div>
+      <div class="separator"></div>
       <div class="certificate-wrapper" id="certificateWrapper">
         <iframe id="pdfFrame" style="width:100%;height:90vh;border:none;display:block;"></iframe>
       </div>
