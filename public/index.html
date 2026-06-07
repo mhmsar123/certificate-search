@@ -12,7 +12,10 @@
 <body>
   <div class="container">
     <div class="school-header">
-      <img src="/app-icon.jpg" alt="" class="school-icon">
+      <div class="school-icon-wrap">
+        <img src="/app-icon.jpg" alt="" class="school-icon">
+        <div class="school-date" id="schoolDate"></div>
+      </div>
       <div class="school-name">مدرسة أسامة بن زيد الاعدادية بنين</div>
       <img src="/app-icon.jpg" alt="" class="school-icon">
     </div>
@@ -202,7 +205,14 @@
     loadBanner();
     loadVisitors();
     loadTotalCertificates();
+    loadDate();
     setInterval(pollUpdates, 30000);
+
+    function loadDate() {
+      const d = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('schoolDate').textContent = d.toLocaleDateString('ar-SA', options);
+    }
   </script>
 </body>
 </html>
