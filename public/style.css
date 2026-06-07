@@ -73,19 +73,27 @@ h1 {
 
 .search-box {
   width: 100%;
-  padding: 20px 25px 20px 60px;
-  font-size: 24px;
-  border: 3px solid #e0e0e0;
-  border-radius: 15px;
+  padding: 22px 25px 22px 60px;
+  font-size: 26px;
+  border: 3px solid #d0d0d0;
+  border-radius: 16px;
   outline: none;
-  transition: border-color 0.3s;
+  transition: all 0.3s ease;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  background: #fafafa;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.06), 0 4px 20px rgba(102, 126, 234, 0.1);
 }
 
 .search-box:focus {
   border-color: #667eea;
-  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+  background: #fff;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02), 0 0 0 4px rgba(102, 126, 234, 0.15), 0 8px 30px rgba(102, 126, 234, 0.2);
+}
+
+.search-box::placeholder {
+  color: #bbb;
+  letter-spacing: 1px;
 }
 
 .search-wrapper {
@@ -95,12 +103,17 @@ h1 {
 
 .search-icon {
   position: absolute;
-  left: 20px;
+  left: 22px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 24px;
-  color: #aaa;
+  font-size: 22px;
+  color: #667eea;
   pointer-events: none;
+  transition: transform 0.3s;
+}
+
+.search-box:focus ~ .search-icon {
+  transform: translateY(-50%) scale(1.15);
 }
 
 .total-certificates {
@@ -468,8 +481,9 @@ button:disabled {
     font-size: 9px;
   }
   .search-box {
-    font-size: 18px;
-    padding: 15px 15px 15px 50px;
+    font-size: 20px;
+    padding: 16px 15px 16px 50px;
+    letter-spacing: 2px;
   }
   .btn {
     font-size: 18px;
