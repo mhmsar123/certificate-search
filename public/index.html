@@ -23,6 +23,8 @@
 
     <input type="text" class="search-box" id="studentId" placeholder="أدخل الرقم الشخصي" inputmode="numeric">
 
+    <div class="total-certificates" id="totalCertificates"></div>
+
     <button class="btn btn-primary" id="searchBtn" onclick="searchCertificate()">
       عرض الشهادة
     </button>
@@ -153,8 +155,19 @@
       } catch (e) {}
     }
 
+    async function loadTotalCertificates() {
+      try {
+        const res = await fetch('/api/total-certificates');
+        const data = await res.json();
+        if (data.total > 0) {
+          document.getElementById('totalCertificates').textContent = `إجمالي الشهادات: ${data.total.toLocaleString('ar-SA')}`;
+        }
+      } catch (e) {}
+    }
+
     loadBanner();
     loadVisitors();
+    loadTotalCertificates();
   </script>
 </body>
 </html>

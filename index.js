@@ -326,6 +326,21 @@ const searchLogPath = path.join(dataDir, 'search-log.json');
 if (!fs.existsSync(visitorPath)) fs.writeFileSync(visitorPath, '0');
 if (!fs.existsSync(searchLogPath)) fs.writeFileSync(searchLogPath, '[]');
 
+app.get('/api/total-certificates', (req, res) => {
+  let total = 0;
+  const uploadsRoot = path.join(__dirname, 'uploads');
+  if (fs.existsSync(uploadsRoot)) {
+    const dirs = fs.readdirSync(uploadsRoot);
+    for (const d of dirs) {
+      const ip = path.join(uploadsRoot, d, 'index.json');
+      if (fs.existsSync(ip)) {
+        try { total += Object.keys(JSON.parse(fs.readFileSync(ip, 'utf8'))).length; } catch (e) {}
+      }
+    }
+  }
+  res.json({ total });
+});
+
 app.get('/api/visitors', (req, res) => {
   let count = parseInt(fs.readFileSync(visitorPath, 'utf8')) || 0;
   count++;
