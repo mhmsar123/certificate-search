@@ -156,6 +156,12 @@ app.post('/api/upload', requireAuth, upload.single('pdf'), async (req, res) => {
       const numbers = text.match(/\b\d{4,}\b/g) || [];
       const pageNum = i + existingPageCount;
 
+      // Log first page items for debugging
+      if (i === 1) {
+        console.log('=== FIRST PAGE ITEMS ===');
+        console.log(JSON.stringify(items.slice(0, 30)));
+      }
+
       let nameText = '';
       for (let j = 0; j < items.length; j++) {
         if (items[j] && items[j].indexOf('Student Name') !== -1) {
